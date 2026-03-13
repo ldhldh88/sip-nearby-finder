@@ -1,12 +1,15 @@
-import { useQuery, useInfiniteQuery } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { searchBars, KakaoPlace } from "@/lib/kakao";
 
-export function useKakaoSearch(district: string | null) {
+const ITEMS_PER_PAGE = 15;
+
+export function useKakaoSearch(district: string | null, page: number = 1) {
   return useQuery({
-    queryKey: ["kakao-bars", district],
-    queryFn: () => searchBars(district!, 1),
+    queryKey: ["kakao-bars", district, page],
+    queryFn: () => searchBars(district!, page, ITEMS_PER_PAGE),
     enabled: !!district,
     staleTime: 5 * 60 * 1000,
+    placeholderData: (prev) => prev, // keep previous data while loading next page
   });
 }
 
@@ -35,3 +38,5 @@ const categoryColorMap: Record<string, string> = {
 export function getCategoryColor(shortCategory: string): string {
   return categoryColorMap[shortCategory] || "bg-muted text-muted-foreground";
 }
+
+export { ITEMS_PER_PAGE };

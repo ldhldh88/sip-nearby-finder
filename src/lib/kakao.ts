@@ -26,7 +26,7 @@ interface KakaoSearchResponse {
   };
 }
 
-// District center coordinates for grid-based category search
+// District center coordinates for category search
 const DISTRICT_COORDS: Record<string, { x: number; y: number; radius: number }> = {
   "강남/역삼/삼성/논현": { x: 127.0366, y: 37.5045, radius: 3000 },
   "서초/신사/방배": { x: 127.0127, y: 37.4920, radius: 3000 },
@@ -50,7 +50,6 @@ const DISTRICT_COORDS: Record<string, { x: number; y: number; radius: number }> 
   "수유/미아": { x: 127.0250, y: 37.6370, radius: 2500 },
   "상봉/중랑/면목": { x: 127.0850, y: 37.5930, radius: 2500 },
   "태릉/노원/도봉/창동": { x: 127.0560, y: 37.6520, radius: 3000 },
-  // 경기
   "수원/화성": { x: 127.0000, y: 37.2700, radius: 5000 },
   "성남/분당": { x: 127.1260, y: 37.3820, radius: 4000 },
   "용인/기흥": { x: 127.1140, y: 37.2830, radius: 5000 },
@@ -63,13 +62,11 @@ const DISTRICT_COORDS: Record<string, { x: number; y: number; radius: number }> 
   "남양주/구리/하남": { x: 127.1280, y: 37.5880, radius: 5000 },
   "평택/오산/안성": { x: 127.0120, y: 37.0000, radius: 5000 },
   "이천/여주/광주": { x: 127.4350, y: 37.2720, radius: 5000 },
-  // 인천
   "부평/계양": { x: 126.7220, y: 37.5070, radius: 3000 },
   "주안/간석": { x: 126.6800, y: 37.4500, radius: 3000 },
   "송도/연수": { x: 126.6560, y: 37.3830, radius: 3000 },
   "구월/남동": { x: 126.7310, y: 37.4480, radius: 3000 },
   "청라/검단": { x: 126.6400, y: 37.5300, radius: 3000 },
-  // 기타
   "춘천": { x: 127.7300, y: 37.8810, radius: 5000 },
   "원주": { x: 127.9470, y: 37.3420, radius: 5000 },
   "강릉": { x: 128.8760, y: 37.7520, radius: 5000 },
@@ -122,116 +119,24 @@ const DISTRICT_COORDS: Record<string, { x: number; y: number; radius: number }> 
   "익산/군산": { x: 126.9540, y: 35.9440, radius: 5000 },
 };
 
-function getSearchQuery(district: string): string {
-  return district.split("/")[0];
-}
-
 function getDistrictCoords(district: string) {
   return DISTRICT_COORDS[district] || null;
 }
 
-// Generate sub-grid rectangles for a district to get more results
-function generateGridRects(
-  centerX: number,
-  centerY: number,
-  radius: number,
-  gridSize: number = 3
-): string[] {
-  const rects: string[] = [];
-  // Convert radius (meters) to approximate degrees
-  const latDeg = radius / 111000; // ~111km per degree latitude
-  const lngDeg = radius / (111000 * Math.cos((centerY * Math.PI) / 180));
-
-  const cellW = (lngDeg * 2) / gridSize;
-  const cellH = (latDeg * 2) / gridSize;
-
-  for (let i = 0; i < gridSize; i++) {
-    for (let j = 0; j < gridSize; j++) {
-      const x1 = centerX - lngDeg + i * cellW;
-      const y1 = centerY - latDeg + j * cellH;
-      const x2 = x1 + cellW;
-      const y2 = y1 + cellH;
-      // rect format: x1,y1,x2,y2 (left-bottom, right-top)
-      rects.push(`${x1},${y1},${x2},${y2}`);
-    }
-  }
-  return rects;
+function getSearchQuery(district: string): string {
+  return district.split("/")[0];
 }
 
 export async function searchBars(
   district: string,
   page = 1,
   size = 15
-): Promise<{ places: KakaoPlace[]; isEnd: boolean; total: number }> {
+): Promise<{ places: KakaoPlace[]; isEnd: boolean; total: number; currentPage: number; totalPages: number }> {
   const coords = getDistrictCoords(district);
   const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
   const anonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 
-  if (coords && page === 1) {
-    // First page: use grid-based category search to get many results
-    const grids = generateGridRects(coords.x, coords.y, coords.radius, 3);
-
-    const allPlaces: KakaoPlace[] = [];
-    const seenIds = new Set<string>();
-
-    // Fetch all grid cells in parallel, 3 pages each
-    const fetches: Promise<void>[] = [];
-
-    for (const rect of grids) {
-      for (let p = 1; p <= 3; p++) {
-        fetches.push(
-          (async () => {
-            const params = new URLSearchParams({
-              mode: 'category',
-              category_group_code: 'FD6',
-              rect,
-              page: String(p),
-              size: '15',
-              sort: 'accuracy',
-            });
-
-            try {
-              const res = await fetch(
-                `${supabaseUrl}/functions/v1/kakao-proxy?${params}`,
-                {
-                  headers: {
-                    Authorization: `Bearer ${anonKey}`,
-                    apikey: anonKey,
-                  },
-                }
-              );
-
-              if (res.ok) {
-                const data: KakaoSearchResponse = await res.json();
-                for (const doc of data.documents) {
-                  // Filter to only bars/pubs (술집)
-                  if (
-                    doc.category_name?.includes("술집") &&
-                    !seenIds.has(doc.id)
-                  ) {
-                    seenIds.add(doc.id);
-                    allPlaces.push(doc);
-                  }
-                }
-              }
-            } catch {
-              // Skip failed grid cell
-            }
-          })()
-        );
-      }
-    }
-
-    await Promise.all(fetches);
-
-    return {
-      places: allPlaces,
-      isEnd: true, // All results loaded at once
-      total: allPlaces.length,
-    };
-  }
-
-  // Fallback: keyword search for non-grid districts or subsequent pages
+  // Use keyword search with coordinates for proper server-side pagination
   const location = getSearchQuery(district);
   const query = `${location} 술집`;
 
@@ -241,6 +146,13 @@ export async function searchBars(
     size: String(size),
     sort: "accuracy",
   });
+
+  // Add coordinate context if available for better relevance
+  if (coords) {
+    params.set('x', String(coords.x));
+    params.set('y', String(coords.y));
+    params.set('radius', String(coords.radius));
+  }
 
   const res = await fetch(
     `${supabaseUrl}/functions/v1/kakao-proxy?${params}`,
@@ -257,10 +169,14 @@ export async function searchBars(
   }
 
   const data: KakaoSearchResponse = await res.json();
+  const total = data.meta.pageable_count;
+  const totalPages = Math.ceil(total / size);
 
   return {
     places: data.documents,
     isEnd: data.meta.is_end,
-    total: data.meta.pageable_count, // Show accessible count, not total_count
+    total,
+    currentPage: page,
+    totalPages,
   };
 }

@@ -1,28 +1,43 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronDown, Wine, Loader2 } from "lucide-react";
+import { ChevronDown, Wine, Loader2, ChevronLeft, ChevronRight } from "lucide-react";
 import RegionSelector from "@/components/RegionSelector";
 import BarCard from "@/components/BarCard";
 import SearchBar from "@/components/SearchBar";
 import BarDetailSheet from "@/components/BarDetailSheet";
-import { useKakaoSearch } from "@/hooks/useKakaoSearch";
+import { useKakaoSearch, ITEMS_PER_PAGE } from "@/hooks/useKakaoSearch";
 import { KakaoPlace } from "@/lib/kakao";
-
-const ITEMS_PER_PAGE = 20;
+import { Button } from "@/components/ui/button";
 
 const Index = () => {
+  const [searchParams, setSearchParams] = useSearchParams();
   const [regionOpen, setRegionOpen] = useState(false);
-  const [selectedProvince, setSelectedProvince] = useState<string | null>("서울");
-  const [selectedDistrict, setSelectedDistrict] = useState<string | null>("강남/역삼/삼성/논현");
   const [detailPlace, setDetailPlace] = useState<KakaoPlace | null>(null);
-  const [visibleCount, setVisibleCount] = useState(ITEMS_PER_PAGE);
 
-  const { data, isLoading, isError } = useKakaoSearch(selectedDistrict);
+  // Read state from URL
+  const selectedProvince = searchParams.get("province") || "서울";
+  const selectedDistrict = searchParams.get("district") || "강남/역삼/삼성/논현";
+  const currentPage = parseInt(searchParams.get("page") || "1", 10);
+
+  const { data, isLoading, isError, isFetching } = useKakaoSearch(
+    selectedDistrict,
+    currentPage
+  );
 
   const handleSelectRegion = (province: string, district: string | null) => {
-    setSelectedProvince(province);
-    setSelectedDistrict(district);
-    setVisibleCount(ITEMS_PER_PAGE);
+    const params = new URLSearchParams();
+    params.set("province", province);
+    if (district) params.set("district", district);
+    params.set("page", "1");
+    setSearchParams(params);
+  };
+
+  const goToPage = (page: number) => {
+    const params = new URLSearchParams(searchParams);
+    params.set("page", String(page));
+    setSearchParams(params);
+    window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
   const regionLabel = selectedDistrict
@@ -31,30 +46,24 @@ const Index = () => {
       ? `${selectedProvince.replace("\n", " ")} 전체`
       : "지역 선택";
 
-  const allPlaces = data?.places ?? [];
+  const places = data?.places ?? [];
   const total = data?.total ?? 0;
-  const visiblePlaces = allPlaces.slice(0, visibleCount);
-  const hasMore = visibleCount < allPlaces.length;
+  const totalPages = data?.totalPages ?? 1;
 
-  // Infinite scroll observer (client-side pagination of loaded results)
-  const sentinelRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const el = sentinelRef.current;
-    if (!el) return;
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries[0].isIntersecting && hasMore) {
-          setVisibleCount((prev) => prev + ITEMS_PER_PAGE);
-        }
-      },
-      { rootMargin: "200px" }
-    );
-
-    observer.observe(el);
-    return () => observer.disconnect();
-  }, [hasMore]);
+  // Generate page numbers to show
+  const getPageNumbers = () => {
+    const pages: number[] = [];
+    const maxVisible = 5;
+    let start = Math.max(1, currentPage - Math.floor(maxVisible / 2));
+    let end = Math.min(totalPages, start + maxVisible - 1);
+    if (end - start + 1 < maxVisible) {
+      start = Math.max(1, end - maxVisible + 1);
+    }
+    for (let i = start; i <= end; i++) {
+      pages.push(i);
+    }
+    return pages;
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -87,9 +96,9 @@ const Index = () => {
         {data && !isLoading && (
           <p className="mb-4 text-sm text-muted-foreground">
             총 <span className="font-semibold text-foreground">{total}</span>개의 술집
-            {visibleCount < allPlaces.length && (
-              <span className="ml-1">({visibleCount}개 표시 중)</span>
-            )}
+            <span className="ml-1">
+              (페이지 {currentPage} / {totalPages})
+            </span>
           </p>
         )}
 
@@ -113,11 +122,11 @@ const Index = () => {
         {data && !isLoading && (
           <AnimatePresence mode="wait">
             <motion.div
-              key={`${selectedProvince}-${selectedDistrict}`}
+              key={`${selectedDistrict}-${currentPage}`}
               className="flex flex-col gap-3"
             >
-              {visiblePlaces.length > 0 ? (
-                visiblePlaces.map((place, i) => (
+              {places.length > 0 ? (
+                places.map((place, i) => (
                   <BarCard
                     key={place.id}
                     place={place}
@@ -143,14 +152,80 @@ const Index = () => {
           </AnimatePresence>
         )}
 
-        {/* Sentinel for infinite scroll */}
-        <div ref={sentinelRef} className="h-1" />
-
-        {/* Loading more indicator */}
-        {hasMore && (
-          <div className="flex justify-center py-6">
-            <Loader2 className="h-6 w-6 animate-spin text-primary" />
+        {/* Fetching overlay */}
+        {isFetching && !isLoading && (
+          <div className="flex justify-center py-4">
+            <Loader2 className="h-5 w-5 animate-spin text-primary" />
           </div>
+        )}
+
+        {/* Pagination */}
+        {data && totalPages > 1 && !isLoading && (
+          <nav className="mt-8 flex items-center justify-center gap-1">
+            <Button
+              variant="ghost"
+              size="icon"
+              disabled={currentPage <= 1}
+              onClick={() => goToPage(currentPage - 1)}
+              className="h-9 w-9"
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+
+            {getPageNumbers()[0] > 1 && (
+              <>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => goToPage(1)}
+                  className="h-9 w-9 text-sm"
+                >
+                  1
+                </Button>
+                {getPageNumbers()[0] > 2 && (
+                  <span className="px-1 text-muted-foreground">…</span>
+                )}
+              </>
+            )}
+
+            {getPageNumbers().map((p) => (
+              <Button
+                key={p}
+                variant={p === currentPage ? "default" : "ghost"}
+                size="icon"
+                onClick={() => goToPage(p)}
+                className="h-9 w-9 text-sm"
+              >
+                {p}
+              </Button>
+            ))}
+
+            {getPageNumbers()[getPageNumbers().length - 1] < totalPages && (
+              <>
+                {getPageNumbers()[getPageNumbers().length - 1] < totalPages - 1 && (
+                  <span className="px-1 text-muted-foreground">…</span>
+                )}
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => goToPage(totalPages)}
+                  className="h-9 w-9 text-sm"
+                >
+                  {totalPages}
+                </Button>
+              </>
+            )}
+
+            <Button
+              variant="ghost"
+              size="icon"
+              disabled={currentPage >= totalPages}
+              onClick={() => goToPage(currentPage + 1)}
+              className="h-9 w-9"
+            >
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </nav>
         )}
       </main>
 
