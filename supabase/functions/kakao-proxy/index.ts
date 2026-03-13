@@ -16,13 +16,12 @@ serve(async (req) => {
     const page = url.searchParams.get('page') || '1';
     const size = url.searchParams.get('size') || '15';
     const sort = url.searchParams.get('sort') || 'accuracy';
-
-    if (!query) {
-      return new Response(JSON.stringify({ error: 'query parameter is required' }), {
-        status: 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
+    const mode = url.searchParams.get('mode') || 'keyword'; // 'keyword' or 'category'
+    const x = url.searchParams.get('x');
+    const y = url.searchParams.get('y');
+    const radius = url.searchParams.get('radius');
+    const categoryGroupCode = url.searchParams.get('category_group_code');
+    const rect = url.searchParams.get('rect');
 
     const KAKAO_REST_API_KEY = Deno.env.get('KAKAO_REST_API_KEY');
     if (!KAKAO_REST_API_KEY) {
@@ -32,15 +31,35 @@ serve(async (req) => {
       });
     }
 
-    const params = new URLSearchParams({ query, page, size, sort });
-    const kakaoRes = await fetch(
-      `https://dapi.kakao.com/v2/local/search/keyword.json?${params}`,
-      {
-        headers: {
-          Authorization: `KakaoAK ${KAKAO_REST_API_KEY}`,
-        },
+    let kakaoUrl: string;
+    const params = new URLSearchParams({ page, size, sort });
+
+    if (mode === 'category') {
+      // Category search by coordinates
+      if (categoryGroupCode) params.set('category_group_code', categoryGroupCode);
+      if (x) params.set('x', x);
+      if (y) params.set('y', y);
+      if (radius) params.set('radius', radius);
+      if (rect) params.set('rect', rect);
+      if (query) params.set('query', query);
+      kakaoUrl = `https://dapi.kakao.com/v2/local/search/category.json?${params}`;
+    } else {
+      // Keyword search (default)
+      if (!query) {
+        return new Response(JSON.stringify({ error: 'query parameter is required' }), {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
       }
-    );
+      params.set('query', query);
+      kakaoUrl = `https://dapi.kakao.com/v2/local/search/keyword.json?${params}`;
+    }
+
+    const kakaoRes = await fetch(kakaoUrl, {
+      headers: {
+        Authorization: `KakaoAK ${KAKAO_REST_API_KEY}`,
+      },
+    });
 
     const data = await kakaoRes.json();
 

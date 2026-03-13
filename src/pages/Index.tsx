@@ -8,18 +8,21 @@ import BarDetailSheet from "@/components/BarDetailSheet";
 import { useKakaoSearch } from "@/hooks/useKakaoSearch";
 import { KakaoPlace } from "@/lib/kakao";
 
+const ITEMS_PER_PAGE = 20;
+
 const Index = () => {
   const [regionOpen, setRegionOpen] = useState(false);
   const [selectedProvince, setSelectedProvince] = useState<string | null>("서울");
   const [selectedDistrict, setSelectedDistrict] = useState<string | null>("강남/역삼/삼성/논현");
   const [detailPlace, setDetailPlace] = useState<KakaoPlace | null>(null);
+  const [visibleCount, setVisibleCount] = useState(ITEMS_PER_PAGE);
 
-  const { data, isLoading, isError, fetchNextPage, hasNextPage, isFetchingNextPage } =
-    useKakaoSearch(selectedDistrict);
+  const { data, isLoading, isError } = useKakaoSearch(selectedDistrict);
 
   const handleSelectRegion = (province: string, district: string | null) => {
     setSelectedProvince(province);
     setSelectedDistrict(district);
+    setVisibleCount(ITEMS_PER_PAGE);
   };
 
   const regionLabel = selectedDistrict
@@ -28,7 +31,12 @@ const Index = () => {
       ? `${selectedProvince.replace("\n", " ")} 전체`
       : "지역 선택";
 
-  // Infinite scroll observer
+  const allPlaces = data?.places ?? [];
+  const total = data?.total ?? 0;
+  const visiblePlaces = allPlaces.slice(0, visibleCount);
+  const hasMore = visibleCount < allPlaces.length;
+
+  // Infinite scroll observer (client-side pagination of loaded results)
   const sentinelRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -37,8 +45,8 @@ const Index = () => {
 
     const observer = new IntersectionObserver(
       (entries) => {
-        if (entries[0].isIntersecting && hasNextPage && !isFetchingNextPage) {
-          fetchNextPage();
+        if (entries[0].isIntersecting && hasMore) {
+          setVisibleCount((prev) => prev + ITEMS_PER_PAGE);
         }
       },
       { rootMargin: "200px" }
@@ -46,10 +54,7 @@ const Index = () => {
 
     observer.observe(el);
     return () => observer.disconnect();
-  }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
-
-  const allPlaces = data?.pages.flatMap((p) => p.places) ?? [];
-  const total = data?.pages[0]?.total ?? 0;
+  }, [hasMore]);
 
   return (
     <div className="min-h-screen bg-background">
@@ -79,9 +84,12 @@ const Index = () => {
       {/* Content */}
       <main className="mx-auto max-w-3xl px-4 pb-24 pt-5">
         {/* Result count */}
-        {data && (
+        {data && !isLoading && (
           <p className="mb-4 text-sm text-muted-foreground">
             총 <span className="font-semibold text-foreground">{total}</span>개의 술집
+            {visibleCount < allPlaces.length && (
+              <span className="ml-1">({visibleCount}개 표시 중)</span>
+            )}
           </p>
         )}
 
@@ -108,8 +116,8 @@ const Index = () => {
               key={`${selectedProvince}-${selectedDistrict}`}
               className="flex flex-col gap-3"
             >
-              {allPlaces.length > 0 ? (
-                allPlaces.map((place, i) => (
+              {visiblePlaces.length > 0 ? (
+                visiblePlaces.map((place, i) => (
                   <BarCard
                     key={place.id}
                     place={place}
@@ -139,7 +147,7 @@ const Index = () => {
         <div ref={sentinelRef} className="h-1" />
 
         {/* Loading more indicator */}
-        {isFetchingNextPage && (
+        {hasMore && (
           <div className="flex justify-center py-6">
             <Loader2 className="h-6 w-6 animate-spin text-primary" />
           </div>
