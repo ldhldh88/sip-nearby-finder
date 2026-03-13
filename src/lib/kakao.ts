@@ -1,4 +1,4 @@
-const KAKAO_REST_API_KEY = "f001f46f12e7d23916cf8db9902c4aeb";
+import { supabase } from "@/integrations/supabase/client";
 
 export interface KakaoPlace {
   id: string;
@@ -28,9 +28,7 @@ interface KakaoSearchResponse {
   };
 }
 
-// Map district names to search-friendly location queries
 function getSearchQuery(district: string): string {
-  // Use the district name directly as a location keyword
   return district.split("/")[0];
 }
 
@@ -42,6 +40,15 @@ export async function searchBars(
   const location = getSearchQuery(district);
   const query = `${location} 술집`;
 
+  const { data, error } = await supabase.functions.invoke("kakao-proxy", {
+    body: null,
+    headers: { "Content-Type": "application/json" },
+  });
+
+  // Use GET-style by constructing URL manually
+  const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
+  const supabaseUrl = (supabase as any).supabaseUrl || `https://${projectId}.supabase.co`;
+  
   const params = new URLSearchParams({
     query,
     page: String(page),
@@ -50,10 +57,11 @@ export async function searchBars(
   });
 
   const res = await fetch(
-    `https://dapi.kakao.com/v2/local/search/keyword.json?${params}`,
+    `${supabaseUrl}/functions/v1/kakao-proxy?${params}`,
     {
       headers: {
-        Authorization: `KakaoAK ${KAKAO_REST_API_KEY}`,
+        Authorization: `Bearer ${(await supabase.auth.getSession()).data.session?.access_token || import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+        apikey: import.meta.env.VITE_SUPABASE_ANON_KEY,
       },
     }
   );
@@ -62,11 +70,11 @@ export async function searchBars(
     throw new Error(`Kakao API error: ${res.status}`);
   }
 
-  const data: KakaoSearchResponse = await res.json();
+  const responseData: KakaoSearchResponse = await res.json();
 
   return {
-    places: data.documents,
-    isEnd: data.meta.is_end,
-    total: data.meta.total_count,
+    places: responseData.documents,
+    isEnd: responseData.meta.is_end,
+    total: responseData.meta.total_count,
   };
 }
