@@ -131,7 +131,7 @@ export async function searchBars(
   district: string,
   page = 1,
   size = 15
-): Promise<{ places: KakaoPlace[]; isEnd: boolean; total: number; currentPage: number; totalPages: number }> {
+): Promise<{ places: KakaoPlace[]; isEnd: boolean; total: number; pageableCount: number; currentPage: number; totalPages: number }> {
   const coords = getDistrictCoords(district);
   const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
   const anonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
@@ -169,13 +169,15 @@ export async function searchBars(
   }
 
   const data: KakaoSearchResponse = await res.json();
-  const total = data.meta.pageable_count;
-  const totalPages = Math.ceil(total / size);
+  const totalCount = data.meta.total_count;
+  const pageableCount = data.meta.pageable_count;
+  const totalPages = Math.ceil(pageableCount / size);
 
   return {
     places: data.documents,
     isEnd: data.meta.is_end,
-    total,
+    total: totalCount,
+    pageableCount,
     currentPage: page,
     totalPages,
   };
