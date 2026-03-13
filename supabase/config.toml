@@ -1,1 +1,4 @@
 project_id = "hihfxdqmckuzdusoykcd"
+
+[functions.kakao-proxy]
+verify_jwt = false
