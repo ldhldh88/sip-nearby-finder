@@ -1,0 +1,90 @@
+@import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 30 50% 98%;
+    --foreground: 20 14% 15%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 20 14% 15%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 20 14% 15%;
+
+    --primary: 15 80% 50%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 30 20% 94%;
+    --secondary-foreground: 20 14% 15%;
+
+    --muted: 30 20% 90%;
+    --muted-foreground: 20 8% 40%;
+
+    --accent: 30 20% 94%;
+    --accent-foreground: 20 14% 15%;
+
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 20 15% 85%;
+    --input: 20 15% 85%;
+    --ring: 15 80% 60%;
+
+    --radius: 0.75rem;
+
+    --sidebar-background: 0 0% 98%;
+    --sidebar-foreground: 240 5.3% 26.1%;
+    --sidebar-primary: 240 5.9% 10%;
+    --sidebar-primary-foreground: 0 0% 98%;
+    --sidebar-accent: 240 4.8% 95.9%;
+    --sidebar-accent-foreground: 240 5.9% 10%;
+    --sidebar-border: 220 13% 91%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
+
+    --shadow-card: 0 0 0 1px rgba(0,0,0,.05), 0 1px 3px 0 rgba(0,0,0,.04);
+    --shadow-card-hover: 0 0 0 1px rgba(0,0,0,.05), 0 4px 6px -1px rgba(0,0,0,.06), 0 2px 4px -2px rgba(0,0,0,.05);
+    --shadow-primary: 0 4px 12px -2px hsla(15, 80%, 50%, 0.4), 0 2px 4px -2px hsla(15, 80%, 50%, 0.2);
+  }
+
+  .dark {
+    --background: 20 14% 10%;
+    --foreground: 30 20% 90%;
+    --card: 20 14% 14%;
+    --card-foreground: 30 20% 90%;
+    --popover: 20 14% 14%;
+    --popover-foreground: 30 20% 90%;
+    --primary: 15 80% 50%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 20 10% 20%;
+    --secondary-foreground: 30 20% 90%;
+    --muted: 20 10% 20%;
+    --muted-foreground: 20 8% 60%;
+    --accent: 20 10% 20%;
+    --accent-foreground: 30 20% 90%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 20 10% 22%;
+    --input: 20 10% 22%;
+    --ring: 15 80% 60%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  html {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    font-family: 'Pretendard Variable', Pretendard, -apple-system, BlinkMacSystemFont, system-ui, Roboto, sans-serif;
+  }
+}
