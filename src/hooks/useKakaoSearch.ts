@@ -1,19 +1,23 @@
-import { useQuery } from "@tanstack/react-query";
+import { useInfiniteQuery } from "@tanstack/react-query";
 import { searchBars, KakaoPlace } from "@/lib/kakao";
 
 export function useKakaoSearch(district: string | null) {
-  return useQuery({
+  return useInfiniteQuery({
     queryKey: ["kakao-bars", district],
-    queryFn: () => searchBars(district!),
+    queryFn: ({ pageParam = 1 }) => searchBars(district!, pageParam),
+    initialPageParam: 1,
+    getNextPageParam: (lastPage, _allPages, lastPageParam) => {
+      if (lastPage.isEnd) return undefined;
+      return lastPageParam + 1;
+    },
     enabled: !!district,
-    staleTime: 5 * 60 * 1000, // 5 min
+    staleTime: 5 * 60 * 1000,
   });
 }
 
 // Extract a short category from Kakao's full category path
 export function getShortCategory(categoryName: string): string {
   const parts = categoryName.split(" > ");
-  // e.g. "음식점 > 술집 > 호프/맥주" → "호프/맥주"
   return parts[parts.length - 1] || "술집";
 }
 

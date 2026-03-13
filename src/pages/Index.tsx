@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChevronDown, Wine, Loader2 } from "lucide-react";
 import RegionSelector from "@/components/RegionSelector";
@@ -10,7 +10,8 @@ const Index = () => {
   const [selectedProvince, setSelectedProvince] = useState<string | null>("서울");
   const [selectedDistrict, setSelectedDistrict] = useState<string | null>("강남/역삼/삼성/논현");
 
-  const { data, isLoading, isError } = useKakaoSearch(selectedDistrict);
+  const { data, isLoading, isError, fetchNextPage, hasNextPage, isFetchingNextPage } =
+    useKakaoSearch(selectedDistrict);
 
   const handleSelectRegion = (province: string, district: string | null) => {
     setSelectedProvince(province);
@@ -22,6 +23,29 @@ const Index = () => {
     : selectedProvince
       ? `${selectedProvince.replace("\n", " ")} 전체`
       : "지역 선택";
+
+  // Infinite scroll observer
+  const sentinelRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const el = sentinelRef.current;
+    if (!el) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && hasNextPage && !isFetchingNextPage) {
+          fetchNextPage();
+        }
+      },
+      { rootMargin: "200px" }
+    );
+
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
+
+  const allPlaces = data?.pages.flatMap((p) => p.places) ?? [];
+  const total = data?.pages[0]?.total ?? 0;
 
   return (
     <div className="min-h-screen bg-background">
@@ -49,7 +73,7 @@ const Index = () => {
         {/* Result count */}
         {data && (
           <p className="mb-4 text-sm text-muted-foreground">
-            총 <span className="font-semibold text-foreground">{data.total}</span>개의 술집
+            총 <span className="font-semibold text-foreground">{total}</span>개의 술집
           </p>
         )}
 
@@ -76,8 +100,8 @@ const Index = () => {
               key={`${selectedProvince}-${selectedDistrict}`}
               className="flex flex-col gap-3"
             >
-              {data.places.length > 0 ? (
-                data.places.map((place, i) => (
+              {allPlaces.length > 0 ? (
+                allPlaces.map((place, i) => (
                   <BarCard key={place.id} place={place} index={i} />
                 ))
               ) : (
@@ -96,6 +120,16 @@ const Index = () => {
               )}
             </motion.div>
           </AnimatePresence>
+        )}
+
+        {/* Sentinel for infinite scroll */}
+        <div ref={sentinelRef} className="h-1" />
+
+        {/* Loading more indicator */}
+        {isFetchingNextPage && (
+          <div className="flex justify-center py-6">
+            <Loader2 className="h-6 w-6 animate-spin text-primary" />
+          </div>
         )}
       </main>
 
