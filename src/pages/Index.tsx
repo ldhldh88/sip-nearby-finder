@@ -48,6 +48,7 @@ const Index = () => {
 
   const places = data?.places ?? [];
   const total = data?.total ?? 0;
+  const pageableCount = data?.pageableCount ?? 0;
   const totalPages = data?.totalPages ?? 1;
 
   // Generate page numbers to show
