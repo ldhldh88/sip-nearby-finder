@@ -1,4 +1,4 @@
-const KAKAO_REST_API_KEY = "f001f46f12e7d23916cf8db9902c4aeb";
+import { supabase } from "@/integrations/supabase/client";
 
 export interface KakaoPlace {
   id: string;
@@ -8,8 +8,8 @@ export interface KakaoPlace {
   phone: string;
   address_name: string;
   road_address_name: string;
-  x: string; // longitude
-  y: string; // latitude
+  x: string;
+  y: string;
   place_url: string;
   distance: string;
 }
@@ -28,9 +28,7 @@ interface KakaoSearchResponse {
   };
 }
 
-// Map district names to search-friendly location queries
 function getSearchQuery(district: string): string {
-  // Use the district name directly as a location keyword
   return district.split("/")[0];
 }
 
@@ -49,11 +47,15 @@ export async function searchBars(
     sort: "accuracy",
   });
 
+  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+  const anonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+
   const res = await fetch(
-    `https://dapi.kakao.com/v2/local/search/keyword.json?${params}`,
+    `${supabaseUrl}/functions/v1/kakao-proxy?${params}`,
     {
       headers: {
-        Authorization: `KakaoAK ${KAKAO_REST_API_KEY}`,
+        Authorization: `Bearer ${anonKey}`,
+        apikey: anonKey,
       },
     }
   );
