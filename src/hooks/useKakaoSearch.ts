@@ -6,9 +6,9 @@ export function useKakaoSearch(district: string | null) {
     queryKey: ["kakao-bars", district],
     queryFn: ({ pageParam = 1 }) => searchBars(district!, pageParam),
     initialPageParam: 1,
-    getNextPageParam: (lastPage, _allPages, lastPageParam) => {
+    getNextPageParam: (lastPage, _allPages, lastPageParam: number) => {
       if (lastPage.isEnd) return undefined;
-      return lastPageParam + 1;
+      return (lastPageParam ?? 1) + 1;
     },
     enabled: !!district,
     staleTime: 5 * 60 * 1000,
