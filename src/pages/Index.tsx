@@ -1,15 +1,16 @@
-import { useState, useMemo } from "react";
+import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronDown, Wine } from "lucide-react";
+import { ChevronDown, Wine, Loader2 } from "lucide-react";
 import RegionSelector from "@/components/RegionSelector";
 import BarCard from "@/components/BarCard";
-import { SAMPLE_BARS } from "@/data/regions";
+import { useKakaoSearch } from "@/hooks/useKakaoSearch";
 
 const Index = () => {
   const [regionOpen, setRegionOpen] = useState(false);
   const [selectedProvince, setSelectedProvince] = useState<string | null>("서울");
   const [selectedDistrict, setSelectedDistrict] = useState<string | null>("강남/역삼/삼성/논현");
-  const [sortBy, setSortBy] = useState<"distance" | "rating">("distance");
+
+  const { data, isLoading, isError } = useKakaoSearch(selectedDistrict);
 
   const handleSelectRegion = (province: string, district: string | null) => {
     setSelectedProvince(province);
@@ -21,17 +22,6 @@ const Index = () => {
     : selectedProvince
       ? `${selectedProvince.replace("\n", " ")} 전체`
       : "지역 선택";
-
-  const filteredBars = useMemo(() => {
-    let bars = SAMPLE_BARS;
-    if (selectedDistrict) {
-      bars = bars.filter((b) => b.district === selectedDistrict);
-    }
-    return [...bars].sort((a, b) => {
-      if (sortBy === "rating") return b.rating - a.rating;
-      return parseInt(a.distance) - parseInt(b.distance);
-    });
-  }, [selectedDistrict, sortBy]);
 
   return (
     <div className="min-h-screen bg-background">
@@ -56,56 +46,57 @@ const Index = () => {
 
       {/* Content */}
       <main className="mx-auto max-w-3xl px-4 pb-24 pt-5">
-        {/* Sort buttons */}
-        <div className="mb-4 flex items-center gap-2">
-          <button
-            onClick={() => setSortBy("distance")}
-            className={`rounded-full px-3 py-1.5 text-sm font-medium transition-colors
-              ${sortBy === "distance"
-                ? "bg-foreground text-background"
-                : "bg-muted/50 text-muted-foreground hover:bg-muted"
-              }`}
-          >
-            거리순
-          </button>
-          <button
-            onClick={() => setSortBy("rating")}
-            className={`rounded-full px-3 py-1.5 text-sm font-medium transition-colors
-              ${sortBy === "rating"
-                ? "bg-foreground text-background"
-                : "bg-muted/50 text-muted-foreground hover:bg-muted"
-              }`}
-          >
-            평점순
-          </button>
-        </div>
+        {/* Result count */}
+        {data && (
+          <p className="mb-4 text-sm text-muted-foreground">
+            총 <span className="font-semibold text-foreground">{data.total}</span>개의 술집
+          </p>
+        )}
+
+        {/* Loading */}
+        {isLoading && (
+          <div className="flex flex-col items-center justify-center py-20">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            <p className="mt-3 text-sm text-muted-foreground">술집을 찾고 있어요…</p>
+          </div>
+        )}
+
+        {/* Error */}
+        {isError && (
+          <div className="py-20 text-center">
+            <p className="text-lg font-medium text-destructive">데이터를 불러오지 못했어요</p>
+            <p className="mt-1 text-sm text-muted-foreground">잠시 후 다시 시도해 주세요</p>
+          </div>
+        )}
 
         {/* Bar List */}
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={`${selectedProvince}-${selectedDistrict}-${sortBy}`}
-            className="flex flex-col gap-3"
-          >
-            {filteredBars.length > 0 ? (
-              filteredBars.map((bar, i) => (
-                <BarCard key={bar.id} bar={bar} index={i} />
-              ))
-            ) : (
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                className="py-20 text-center"
-              >
-                <p className="text-lg font-medium text-muted-foreground">
-                  이 지역의 술집 정보를 준비 중이에요
-                </p>
-                <p className="mt-1 text-sm text-muted-foreground/70">
-                  다른 지역을 선택해 보세요
-                </p>
-              </motion.div>
-            )}
-          </motion.div>
-        </AnimatePresence>
+        {data && !isLoading && (
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={`${selectedProvince}-${selectedDistrict}`}
+              className="flex flex-col gap-3"
+            >
+              {data.places.length > 0 ? (
+                data.places.map((place, i) => (
+                  <BarCard key={place.id} place={place} index={i} />
+                ))
+              ) : (
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  className="py-20 text-center"
+                >
+                  <p className="text-lg font-medium text-muted-foreground">
+                    이 지역의 술집 정보를 찾지 못했어요
+                  </p>
+                  <p className="mt-1 text-sm text-muted-foreground/70">
+                    다른 지역을 선택해 보세요
+                  </p>
+                </motion.div>
+              )}
+            </motion.div>
+          </AnimatePresence>
+        )}
       </main>
 
       {/* Region Selector Modal */}
