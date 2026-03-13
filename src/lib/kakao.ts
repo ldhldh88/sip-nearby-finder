@@ -49,8 +49,9 @@ export async function searchBars(
     sort: "accuracy",
   });
 
+  const targetUrl = `https://dapis.kakao.com/v2/local/search/keyword.json?${params}`;
   const res = await fetch(
-    `https://dapis.kakao.com/v2/local/search/keyword.json?${params}`,
+    `https://corsproxy.io/?${encodeURIComponent(targetUrl)}`,
     {
       headers: {
         Authorization: `KakaoAK ${KAKAO_REST_API_KEY}`,
