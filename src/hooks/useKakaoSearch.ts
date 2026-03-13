@@ -1,15 +1,10 @@
-import { useInfiniteQuery } from "@tanstack/react-query";
+import { useQuery, useInfiniteQuery } from "@tanstack/react-query";
 import { searchBars, KakaoPlace } from "@/lib/kakao";
 
 export function useKakaoSearch(district: string | null) {
-  return useInfiniteQuery({
+  return useQuery({
     queryKey: ["kakao-bars", district],
-    queryFn: ({ pageParam = 1 }) => searchBars(district!, pageParam),
-    initialPageParam: 1,
-    getNextPageParam: (lastPage, _allPages, lastPageParam: number) => {
-      if (lastPage.isEnd) return undefined;
-      return (lastPageParam ?? 1) + 1;
-    },
+    queryFn: () => searchBars(district!, 1),
     enabled: !!district,
     staleTime: 5 * 60 * 1000,
   });
@@ -23,9 +18,11 @@ export function getShortCategory(categoryName: string): string {
 
 // Map category to color classes
 const categoryColorMap: Record<string, string> = {
+  "호프,요리주점": "bg-sky-100 text-sky-800",
   "호프/맥주": "bg-sky-100 text-sky-800",
   "칵테일바": "bg-violet-100 text-violet-800",
   "와인바": "bg-red-100 text-red-800",
+  "일본식주점": "bg-rose-100 text-rose-800",
   "이자카야": "bg-rose-100 text-rose-800",
   "요리주점": "bg-amber-100 text-amber-800",
   "포장마차": "bg-orange-100 text-orange-800",
