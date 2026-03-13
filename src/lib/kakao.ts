@@ -169,13 +169,15 @@ export async function searchBars(
   }
 
   const data: KakaoSearchResponse = await res.json();
-  const total = data.meta.pageable_count;
-  const totalPages = Math.ceil(total / size);
+  const totalCount = data.meta.total_count;
+  const pageableCount = data.meta.pageable_count;
+  const totalPages = Math.ceil(pageableCount / size);
 
   return {
     places: data.documents,
     isEnd: data.meta.is_end,
-    total,
+    total: totalCount,
+    pageableCount,
     currentPage: page,
     totalPages,
   };
