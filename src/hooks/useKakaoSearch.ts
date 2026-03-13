@@ -8,7 +8,8 @@ export function useKakaoSearch(district: string | null, page: number = 1) {
     queryKey: ["kakao-bars", district, page],
     queryFn: () => searchBars(district!, page, ITEMS_PER_PAGE),
     enabled: !!district,
-    staleTime: 5 * 60 * 1000,
+    staleTime: 24 * 60 * 60 * 1000,
+    gcTime: 24 * 60 * 60 * 1000,
     placeholderData: (prev) => prev, // keep previous data while loading next page
   });
 }

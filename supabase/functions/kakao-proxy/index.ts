@@ -16,9 +16,6 @@ serve(async (req) => {
     const page = url.searchParams.get('page') || '1';
     const size = url.searchParams.get('size') || '15';
     const sort = url.searchParams.get('sort') || 'accuracy';
-    const x = url.searchParams.get('x');
-    const y = url.searchParams.get('y');
-    const radius = url.searchParams.get('radius');
 
     const KAKAO_REST_API_KEY = Deno.env.get('KAKAO_REST_API_KEY');
     if (!KAKAO_REST_API_KEY) {
@@ -35,12 +32,7 @@ serve(async (req) => {
       });
     }
 
-    const params = new URLSearchParams({ query, page, size, sort });
-    if (x) params.set('x', x);
-    if (y) params.set('y', y);
-    if (radius) params.set('radius', radius);
-
-    const kakaoUrl = `https://dapi.kakao.com/v2/local/search/keyword.json?${params}`;
+    const kakaoUrl = `https://dapi.kakao.com/v2/local/search/keyword.json?${new URLSearchParams({ query, page, size, sort })}`;
 
     const kakaoRes = await fetch(kakaoUrl, {
       headers: {
