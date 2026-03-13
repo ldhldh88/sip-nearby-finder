@@ -1,14 +1,18 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChevronDown, Wine, Loader2 } from "lucide-react";
 import RegionSelector from "@/components/RegionSelector";
 import BarCard from "@/components/BarCard";
+import SearchBar from "@/components/SearchBar";
+import BarDetailSheet from "@/components/BarDetailSheet";
 import { useKakaoSearch } from "@/hooks/useKakaoSearch";
+import { KakaoPlace } from "@/lib/kakao";
 
 const Index = () => {
   const [regionOpen, setRegionOpen] = useState(false);
   const [selectedProvince, setSelectedProvince] = useState<string | null>("서울");
   const [selectedDistrict, setSelectedDistrict] = useState<string | null>("강남/역삼/삼성/논현");
+  const [detailPlace, setDetailPlace] = useState<KakaoPlace | null>(null);
 
   const { data, isLoading, isError, fetchNextPage, hasNextPage, isFetchingNextPage } =
     useKakaoSearch(selectedDistrict);
@@ -57,14 +61,18 @@ const Index = () => {
             <span className="text-lg font-bold tracking-tight text-foreground">술자리</span>
           </div>
 
-          <button
-            onClick={() => setRegionOpen(true)}
-            className="flex items-center gap-1.5 rounded-full bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-transform active:scale-95 hover:scale-105"
-            style={{ boxShadow: "var(--shadow-primary)" }}
-          >
-            {regionLabel.length > 12 ? regionLabel.slice(0, 12) + "…" : regionLabel}
-            <ChevronDown className="h-4 w-4" />
-          </button>
+          <div className="flex items-center gap-2">
+            <SearchBar onSelectPlace={(place) => setDetailPlace(place)} />
+
+            <button
+              onClick={() => setRegionOpen(true)}
+              className="flex items-center gap-1.5 rounded-full bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-transform active:scale-95 hover:scale-105"
+              style={{ boxShadow: "var(--shadow-primary)" }}
+            >
+              {regionLabel.length > 12 ? regionLabel.slice(0, 12) + "…" : regionLabel}
+              <ChevronDown className="h-4 w-4" />
+            </button>
+          </div>
         </div>
       </header>
 
@@ -102,7 +110,12 @@ const Index = () => {
             >
               {allPlaces.length > 0 ? (
                 allPlaces.map((place, i) => (
-                  <BarCard key={place.id} place={place} index={i} />
+                  <BarCard
+                    key={place.id}
+                    place={place}
+                    index={i}
+                    onClick={() => setDetailPlace(place)}
+                  />
                 ))
               ) : (
                 <motion.div
@@ -140,6 +153,12 @@ const Index = () => {
         onSelect={handleSelectRegion}
         selectedProvince={selectedProvince}
         selectedDistrict={selectedDistrict}
+      />
+
+      {/* Bar Detail Sheet */}
+      <BarDetailSheet
+        place={detailPlace}
+        onClose={() => setDetailPlace(null)}
       />
     </div>
   );
