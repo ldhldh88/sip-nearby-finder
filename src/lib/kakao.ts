@@ -8,8 +8,8 @@ export interface KakaoPlace {
   phone: string;
   address_name: string;
   road_address_name: string;
-  x: string; // longitude
-  y: string; // latitude
+  x: string;
+  y: string;
   place_url: string;
   distance: string;
 }
@@ -40,15 +40,6 @@ export async function searchBars(
   const location = getSearchQuery(district);
   const query = `${location} 술집`;
 
-  const { data, error } = await supabase.functions.invoke("kakao-proxy", {
-    body: null,
-    headers: { "Content-Type": "application/json" },
-  });
-
-  // Use GET-style by constructing URL manually
-  const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
-  const supabaseUrl = (supabase as any).supabaseUrl || `https://${projectId}.supabase.co`;
-  
   const params = new URLSearchParams({
     query,
     page: String(page),
@@ -56,12 +47,15 @@ export async function searchBars(
     sort: "accuracy",
   });
 
+  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+  const anonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+
   const res = await fetch(
     `${supabaseUrl}/functions/v1/kakao-proxy?${params}`,
     {
       headers: {
-        Authorization: `Bearer ${(await supabase.auth.getSession()).data.session?.access_token || import.meta.env.VITE_SUPABASE_ANON_KEY}`,
-        apikey: import.meta.env.VITE_SUPABASE_ANON_KEY,
+        Authorization: `Bearer ${anonKey}`,
+        apikey: anonKey,
       },
     }
   );
@@ -70,11 +64,11 @@ export async function searchBars(
     throw new Error(`Kakao API error: ${res.status}`);
   }
 
-  const responseData: KakaoSearchResponse = await res.json();
+  const data: KakaoSearchResponse = await res.json();
 
   return {
-    places: responseData.documents,
-    isEnd: responseData.meta.is_end,
-    total: responseData.meta.total_count,
+    places: data.documents,
+    isEnd: data.meta.is_end,
+    total: data.meta.total_count,
   };
 }
