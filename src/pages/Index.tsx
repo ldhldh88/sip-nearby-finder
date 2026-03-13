@@ -58,7 +58,7 @@ const Index = () => {
         <div className="mx-auto flex h-full max-w-3xl items-center justify-between px-4">
           <div className="flex items-center gap-2">
             <Wine className="h-5 w-5 text-primary" />
-            <span className="text-lg font-bold tracking-tight text-foreground">술자리</span>
+            <span className="text-lg font-bold tracking-tight text-foreground">오늘 술집 어디</span>
           </div>
 
           <div className="flex items-center gap-2">

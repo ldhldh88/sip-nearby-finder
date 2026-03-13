@@ -24,12 +24,21 @@ const BarCard = ({ place, index, onClick }: BarCardProps) => {
       whileHover={{ boxShadow: "var(--shadow-card-hover)" }}
     >
       <div className="flex gap-3.5">
-        {/* Icon placeholder */}
+        {/* Thumbnail */}
         <div
-          className="h-20 w-20 flex-shrink-0 rounded-lg bg-muted flex items-center justify-center"
+          className="h-20 w-20 flex-shrink-0 rounded-lg bg-muted overflow-hidden"
           style={{ outline: "1px solid rgba(0,0,0,0.08)", outlineOffset: "-1px" }}
         >
-          <span className="text-2xl">🍺</span>
+          <img
+            src={`https://dapi.kakao.com/v2/maps/staticmap?appkey=a9e2a8dfe593519da1da857de83f5156&center=${place.x},${place.y}&level=3&width=160&height=160&mapType=roadview_hybrid`}
+            alt={place.place_name}
+            className="h-full w-full object-cover"
+            loading="lazy"
+            onError={(e) => {
+              (e.target as HTMLImageElement).style.display = 'none';
+              (e.target as HTMLImageElement).parentElement!.innerHTML = '<span class="text-2xl flex items-center justify-center h-full w-full">🍺</span>';
+            }}
+          />
         </div>
 
         {/* Content */}

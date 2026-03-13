@@ -100,8 +100,17 @@ const SearchBar = ({ onSelectPlace }: SearchBarProps) => {
                               onClick={() => handleSelect(place)}
                               className="flex w-full items-start gap-3 px-4 py-3 text-left transition-colors hover:bg-muted/50"
                             >
-                              <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-muted text-lg">
-                                🍺
+                              <div className="h-10 w-10 flex-shrink-0 rounded-lg bg-muted overflow-hidden">
+                                <img
+                                  src={`https://dapi.kakao.com/v2/maps/staticmap?appkey=a9e2a8dfe593519da1da857de83f5156&center=${place.x},${place.y}&level=3&width=80&height=80&mapType=roadview_hybrid`}
+                                  alt={place.place_name}
+                                  className="h-full w-full object-cover"
+                                  loading="lazy"
+                                  onError={(e) => {
+                                    (e.target as HTMLImageElement).style.display = 'none';
+                                    (e.target as HTMLImageElement).parentElement!.innerHTML = '<span class="text-lg flex items-center justify-center h-full w-full">🍺</span>';
+                                  }}
+                                />
                               </div>
                               <div className="min-w-0 flex-1">
                                 <p className="text-sm font-semibold text-card-foreground truncate">
