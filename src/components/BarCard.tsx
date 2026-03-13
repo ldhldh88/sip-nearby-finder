@@ -6,17 +6,16 @@ import { getShortCategory, getCategoryColor } from "@/hooks/useKakaoSearch";
 interface BarCardProps {
   place: KakaoPlace;
   index: number;
+  onClick?: () => void;
 }
 
-const BarCard = ({ place, index }: BarCardProps) => {
+const BarCard = ({ place, index, onClick }: BarCardProps) => {
   const shortCategory = getShortCategory(place.category_name);
   const colorClass = getCategoryColor(shortCategory);
 
   return (
-    <motion.a
-      href={place.place_url}
-      target="_blank"
-      rel="noopener noreferrer"
+    <motion.div
+      onClick={onClick}
       initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: index * 0.04, duration: 0.3 }}
@@ -68,7 +67,7 @@ const BarCard = ({ place, index }: BarCardProps) => {
           </div>
         </div>
       </div>
-    </motion.a>
+    </motion.div>
   );
 };
 
