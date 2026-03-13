@@ -96,9 +96,12 @@ const Index = () => {
         {/* Result count */}
         {data && !isLoading && (
           <p className="mb-4 text-sm text-muted-foreground">
-            총 <span className="font-semibold text-foreground">{total}</span>개의 술집
+            총 <span className="font-semibold text-foreground">{total.toLocaleString()}</span>개의 술집
+            {pageableCount < total && (
+              <span className="ml-1 text-xs">(검색 가능: {pageableCount}개)</span>
+            )}
             <span className="ml-1">
-              (페이지 {currentPage} / {totalPages})
+              · 페이지 {currentPage} / {totalPages}
             </span>
           </p>
         )}
