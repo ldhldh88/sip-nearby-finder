@@ -2,7 +2,7 @@ import { motion } from "framer-motion";
 import { MapPin, Phone, ExternalLink } from "lucide-react";
 import { KakaoPlace } from "@/lib/kakao";
 import { getShortCategory, getCategoryColor } from "@/hooks/useKakaoSearch";
-import { getKakaoStaticMapUrl } from "@/lib/kakao-client";
+import PlaceThumbnail from "@/components/PlaceThumbnail";
 
 interface BarCardProps {
   place: KakaoPlace;
@@ -13,13 +13,6 @@ interface BarCardProps {
 const BarCard = ({ place, index, onClick }: BarCardProps) => {
   const shortCategory = getShortCategory(place.category_name);
   const colorClass = getCategoryColor(shortCategory);
-  const thumbnailSrc = getKakaoStaticMapUrl({
-    lat: place.y,
-    lng: place.x,
-    width: 160,
-    height: 160,
-    mapType: "roadview_hybrid",
-  });
 
   return (
     <motion.div
@@ -33,21 +26,12 @@ const BarCard = ({ place, index, onClick }: BarCardProps) => {
     >
       <div className="flex gap-3.5">
         {/* Thumbnail */}
-        <div
-          className="h-20 w-20 flex-shrink-0 rounded-lg bg-muted overflow-hidden"
-          style={{ outline: "1px solid rgba(0,0,0,0.08)", outlineOffset: "-1px" }}
-        >
-          <img
-            src={thumbnailSrc}
-            alt={place.place_name}
-            className="h-full w-full object-cover"
-            loading="lazy"
-            onError={(e) => {
-              (e.target as HTMLImageElement).style.display = "none";
-              (e.target as HTMLImageElement).parentElement!.innerHTML = '<span class="text-2xl flex items-center justify-center h-full w-full">🍺</span>';
-            }}
-          />
-        </div>
+        <PlaceThumbnail
+          placeId={place.id}
+          placeName={place.place_name}
+          className="h-20 w-20 flex-shrink-0 rounded-lg"
+          fallbackSize="md"
+        />
 
         {/* Content */}
         <div className="flex min-w-0 flex-1 flex-col justify-between">

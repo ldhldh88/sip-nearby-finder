@@ -2,6 +2,7 @@ import { motion } from "framer-motion";
 import { MapPin, Flame } from "lucide-react";
 import { HotPlace } from "@/hooks/useNearbyBars";
 import { getShortCategory, getCategoryColor } from "@/hooks/useKakaoSearch";
+import PlaceThumbnail from "@/components/PlaceThumbnail";
 
 interface HotBarCardProps {
   place: HotPlace;
@@ -32,6 +33,14 @@ const HotBarCard = ({ place, rank, onClick }: HotBarCardProps) => {
       <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-primary text-sm font-bold text-primary-foreground">
         {rank}
       </div>
+
+      {/* Thumbnail */}
+      <PlaceThumbnail
+        placeId={place.id}
+        placeName={place.place_name}
+        className="h-10 w-10 flex-shrink-0 rounded-lg"
+        fallbackSize="sm"
+      />
 
       {/* Info */}
       <div className="min-w-0 flex-1">
