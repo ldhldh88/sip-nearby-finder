@@ -3,6 +3,7 @@ import { X, MapPin, Phone, ExternalLink, Navigation } from "lucide-react";
 import { KakaoPlace } from "@/lib/kakao";
 import { getShortCategory, getCategoryColor } from "@/hooks/useKakaoSearch";
 import { useIsMobile } from "@/hooks/use-mobile";
+import PlaceThumbnail from "@/components/PlaceThumbnail";
 
 interface BarDetailSheetProps {
   place: KakaoPlace | null;
