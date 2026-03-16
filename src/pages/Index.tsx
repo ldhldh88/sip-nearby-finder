@@ -94,6 +94,9 @@ const Index = () => {
 
       {/* Content */}
       <main className="mx-auto max-w-3xl px-4 pb-24 pt-5">
+        {/* Hot Bars Section */}
+        <HotBarSection onSelectPlace={(place) => setDetailPlace(place)} />
+
         {/* Result count */}
         {data && !isLoading && (
           <p className="mb-4 text-sm text-muted-foreground">
