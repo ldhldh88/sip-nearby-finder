@@ -4,16 +4,14 @@ const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const anonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 
 // Client-side in-memory cache
-const photoCache = new Map<string, string | null>();
-const pendingRequests = new Map<string, Promise<string | null>>();
+const photoCache = new Map<string, { main: string | null; photos: string[] }>();
+const pendingRequests = new Map<string, Promise<{ main: string | null; photos: string[] }>>();
 
-async function fetchPlacePhoto(placeId: string): Promise<string | null> {
-  // Check cache
+async function fetchPlacePhotos(placeId: string): Promise<{ main: string | null; photos: string[] }> {
   if (photoCache.has(placeId)) {
     return photoCache.get(placeId)!;
   }
 
-  // Deduplicate in-flight requests
   if (pendingRequests.has(placeId)) {
     return pendingRequests.get(placeId)!;
   }
@@ -31,17 +29,22 @@ async function fetchPlacePhoto(placeId: string): Promise<string | null> {
       );
 
       if (!res.ok) {
-        photoCache.set(placeId, null);
-        return null;
+        const result = { main: null, photos: [] as string[] };
+        photoCache.set(placeId, result);
+        return result;
       }
 
       const data = await res.json();
-      const url = data.photo_url || null;
-      photoCache.set(placeId, url);
-      return url;
+      const result = {
+        main: data.photo_url || null,
+        photos: data.photos || (data.photo_url ? [data.photo_url] : []),
+      };
+      photoCache.set(placeId, result);
+      return result;
     } catch {
-      photoCache.set(placeId, null);
-      return null;
+      const result = { main: null, photos: [] as string[] };
+      photoCache.set(placeId, result);
+      return result;
     } finally {
       pendingRequests.delete(placeId);
     }
@@ -54,19 +57,26 @@ async function fetchPlacePhoto(placeId: string): Promise<string | null> {
 export function usePlacePhoto(placeId: string | undefined) {
   const [photoUrl, setPhotoUrl] = useState<string | null>(() => {
     if (!placeId) return null;
-    return photoCache.get(placeId) ?? null;
+    return photoCache.get(placeId)?.main ?? null;
+  });
+  const [photos, setPhotos] = useState<string[]>(() => {
+    if (!placeId) return [];
+    return photoCache.get(placeId)?.photos ?? [];
   });
   const [loading, setLoading] = useState(!photoCache.has(placeId ?? ""));
 
   useEffect(() => {
     if (!placeId) {
       setPhotoUrl(null);
+      setPhotos([]);
       setLoading(false);
       return;
     }
 
     if (photoCache.has(placeId)) {
-      setPhotoUrl(photoCache.get(placeId)!);
+      const cached = photoCache.get(placeId)!;
+      setPhotoUrl(cached.main);
+      setPhotos(cached.photos);
       setLoading(false);
       return;
     }
@@ -74,9 +84,10 @@ export function usePlacePhoto(placeId: string | undefined) {
     let cancelled = false;
     setLoading(true);
 
-    fetchPlacePhoto(placeId).then((url) => {
+    fetchPlacePhotos(placeId).then((result) => {
       if (!cancelled) {
-        setPhotoUrl(url);
+        setPhotoUrl(result.main);
+        setPhotos(result.photos);
         setLoading(false);
       }
     });
@@ -86,5 +97,5 @@ export function usePlacePhoto(placeId: string | undefined) {
     };
   }, [placeId]);
 
-  return { photoUrl, loading };
+  return { photoUrl, photos, loading };
 }

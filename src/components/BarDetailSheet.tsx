@@ -4,6 +4,7 @@ import { KakaoPlace } from "@/lib/kakao";
 import { getShortCategory, getCategoryColor } from "@/hooks/useKakaoSearch";
 import { useIsMobile } from "@/hooks/use-mobile";
 import PlaceThumbnail from "@/components/PlaceThumbnail";
+import { usePlacePhoto } from "@/hooks/usePlacePhoto";
 
 interface BarDetailSheetProps {
   place: KakaoPlace | null;
@@ -20,7 +21,6 @@ const BarDetailSheet = ({ place, onClose }: BarDetailSheetProps) => {
   const shortCategory = getShortCategory(place.category_name);
   const colorClass = getCategoryColor(shortCategory);
   const mapSrc = `https://map.kakao.com/link/map/${place.place_name},${place.y},${place.x}`;
-  const staticMapUrl = `https://dapi.kakao.com/v2/maps/open/staticmap?center=${place.x},${place.y}&level=3&w=600&h=300&markers=color:red|label:|pos:${place.x} ${place.y}`;
 
   return (
     <AnimatePresence>
@@ -76,6 +76,8 @@ function SheetContent({
   colorClass: string;
   mapSrc: string;
 }) {
+  const { photos } = usePlacePhoto(place.id);
+
   return (
     <div className="flex flex-col">
       {/* Handle bar for mobile */}
@@ -83,15 +85,30 @@ function SheetContent({
         <div className="h-1 w-10 rounded-full bg-muted" />
       </div>
 
-      {/* Header */}
-      <div className="flex items-start justify-between gap-3 px-5 pt-4 pb-3">
-        <div className="flex items-center gap-3 min-w-0 flex-1">
+      {/* Photo gallery banner */}
+      {photos.length > 0 && (
+        <div className="mx-5 mt-3 overflow-hidden rounded-xl">
           <PlaceThumbnail
             placeId={place.id}
             placeName={place.place_name}
-            className="h-14 w-14 flex-shrink-0 rounded-xl"
-            fallbackSize="md"
+            className="h-48 w-full rounded-xl"
+            fallbackSize="lg"
+            enableGallery
           />
+        </div>
+      )}
+
+      {/* Header */}
+      <div className="flex items-start justify-between gap-3 px-5 pt-4 pb-3">
+        <div className="flex items-center gap-3 min-w-0 flex-1">
+          {photos.length === 0 && (
+            <PlaceThumbnail
+              placeId={place.id}
+              placeName={place.place_name}
+              className="h-14 w-14 flex-shrink-0 rounded-xl"
+              fallbackSize="md"
+            />
+          )}
           <div className="min-w-0 flex-1">
             <h2 className="text-xl font-bold text-card-foreground truncate">{place.place_name}</h2>
             <span className={`mt-1.5 inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ${colorClass}`}>

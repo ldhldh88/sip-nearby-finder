@@ -5,8 +5,9 @@ const corsHeaders = {
 };
 
 // In-memory cache (persists across warm invocations)
-const cache = new Map<string, { url: string | null; ts: number }>();
+const cache = new Map<string, { photos: string[]; ts: number }>();
 const CACHE_TTL = 24 * 60 * 60 * 1000; // 24h
+const MAX_PHOTOS = 5;
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -28,12 +29,14 @@ Deno.serve(async (req) => {
     const cached = cache.get(placeId);
     if (cached && Date.now() - cached.ts < CACHE_TTL) {
       return new Response(
-        JSON.stringify({ photo_url: cached.url }),
+        JSON.stringify({ photo_url: cached.photos[0] || null, photos: cached.photos }),
         { headers: { ...corsHeaders, "Content-Type": "application/json", "Cache-Control": "public, max-age=86400" } }
       );
     }
 
-    // Fetch Kakao place page
+    const photos: string[] = [];
+
+    // Fetch Kakao place JSON API
     const placeUrl = `https://place.map.kakao.com/main/v/${placeId}`;
     const res = await fetch(placeUrl, {
       headers: {
@@ -42,30 +45,36 @@ Deno.serve(async (req) => {
       },
     });
 
-    let photoUrl: string | null = null;
-
     if (res.ok) {
       try {
         const data = await res.json();
-        // Kakao place API returns JSON with photo info
+
+        // Main photo
         const mainPhoto = data?.basicInfo?.mainphotourl;
-        if (mainPhoto) {
-          photoUrl = mainPhoto;
-        } else {
-          // Try photoList
-          const photos = data?.photo?.photoList;
-          if (photos && photos.length > 0 && photos[0].list && photos[0].list.length > 0) {
-            photoUrl = photos[0].list[0].orgurl || photos[0].list[0].url || null;
+        if (mainPhoto) photos.push(mainPhoto);
+
+        // Photo list - extract up to MAX_PHOTOS
+        const photoGroups = data?.photo?.photoList;
+        if (photoGroups && Array.isArray(photoGroups)) {
+          for (const group of photoGroups) {
+            if (group.list && Array.isArray(group.list)) {
+              for (const item of group.list) {
+                const photoUrl = item.orgurl || item.url;
+                if (photoUrl && !photos.includes(photoUrl) && photos.length < MAX_PHOTOS) {
+                  photos.push(photoUrl);
+                }
+              }
+            }
+            if (photos.length >= MAX_PHOTOS) break;
           }
         }
       } catch {
-        // If not JSON, try HTML og:image parsing
-        // This is a fallback in case the API format changes
+        // JSON parse failed
       }
     }
 
-    // If JSON approach failed, try the HTML page
-    if (!photoUrl) {
+    // Fallback: HTML og:image
+    if (photos.length === 0) {
       try {
         const htmlRes = await fetch(`https://place.map.kakao.com/${placeId}`, {
           headers: {
@@ -76,7 +85,7 @@ Deno.serve(async (req) => {
           const html = await htmlRes.text();
           const ogMatch = html.match(/<meta\s+property=["']og:image["']\s+content=["']([^"']+)["']/i);
           if (ogMatch?.[1]) {
-            photoUrl = ogMatch[1];
+            photos.push(ogMatch[1]);
           }
         }
       } catch {
@@ -85,7 +94,7 @@ Deno.serve(async (req) => {
     }
 
     // Cache result
-    cache.set(placeId, { url: photoUrl, ts: Date.now() });
+    cache.set(placeId, { photos, ts: Date.now() });
 
     // Limit cache size
     if (cache.size > 5000) {
@@ -96,13 +105,13 @@ Deno.serve(async (req) => {
     }
 
     return new Response(
-      JSON.stringify({ photo_url: photoUrl }),
+      JSON.stringify({ photo_url: photos[0] || null, photos }),
       { headers: { ...corsHeaders, "Content-Type": "application/json", "Cache-Control": "public, max-age=86400" } }
     );
   } catch (error) {
     console.error("Error fetching place photo:", error);
     return new Response(
-      JSON.stringify({ photo_url: null, error: "Failed to fetch photo" }),
+      JSON.stringify({ photo_url: null, photos: [], error: "Failed to fetch photo" }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }

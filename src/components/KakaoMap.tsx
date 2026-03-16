@@ -63,6 +63,15 @@ function loadKakaoSDK(): Promise<void> {
   return sdkPromise;
 }
 
+// Map category to emoji marker
+function getCategoryEmoji(categoryName: string): string {
+  const name = categoryName.toLowerCase();
+  if (name.includes("와인")) return "🍷";
+  if (name.includes("칵테일") || name.includes("라운지")) return "🍸";
+  if (name.includes("이자카야") || name.includes("일본식")) return "🍶";
+  return "🍺";
+}
+
 const KakaoMap = ({ center, places, onSelectPlace, className }: KakaoMapProps) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<any>(null);
@@ -118,16 +127,16 @@ const KakaoMap = ({ center, places, onSelectPlace, className }: KakaoMapProps) =
 
     places.forEach((place, i) => {
       const pos = new kakao.maps.LatLng(parseFloat(place.y), parseFloat(place.x));
+      const emoji = getCategoryEmoji(place.category_name);
 
-      // Custom overlay for rank number
       const content = document.createElement("div");
       content.innerHTML = `<div style="
-        display:flex;align-items:center;justify-content:center;
-        width:28px;height:28px;border-radius:50%;
-        background:hsl(15,80%,50%);color:#fff;font-weight:700;font-size:13px;
+        display:flex;align-items:center;justify-content:center;gap:2px;
+        padding:3px 8px;border-radius:16px;
+        background:hsl(var(--primary));color:#fff;font-weight:700;font-size:13px;
         border:2px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,.3);
-        cursor:pointer;
-      ">${i + 1}</div>`;
+        cursor:pointer;white-space:nowrap;
+      "><span style="font-size:14px">${emoji}</span>${i + 1}</div>`;
 
       const overlay = new kakao.maps.CustomOverlay({
         position: pos,
