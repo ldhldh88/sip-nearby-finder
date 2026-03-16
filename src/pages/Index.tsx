@@ -238,6 +238,8 @@ const Index = () => {
         )}
       </main>
 
+      <Footer />
+
       {/* Region Selector Modal */}
       <RegionSelector
         open={regionOpen}
