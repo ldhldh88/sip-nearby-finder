@@ -25,12 +25,13 @@ const BarCard = ({ place, index, onClick }: BarCardProps) => {
       whileHover={{ boxShadow: "var(--shadow-card-hover)" }}
     >
       <div className="flex gap-3.5">
-        {/* Thumbnail */}
+        {/* Thumbnail with gallery */}
         <PlaceThumbnail
           placeId={place.id}
           placeName={place.place_name}
           className="h-20 w-20 flex-shrink-0 rounded-lg"
           fallbackSize="md"
+          enableGallery
         />
 
         {/* Content */}
