@@ -10,6 +10,7 @@ import HotBarSection from "@/components/HotBarSection";
 import { useKakaoSearch, ITEMS_PER_PAGE } from "@/hooks/useKakaoSearch";
 import { KakaoPlace } from "@/lib/kakao";
 import { Button } from "@/components/ui/button";
+import Footer from "@/components/Footer";
 
 const Index = () => {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -236,6 +237,8 @@ const Index = () => {
           </nav>
         )}
       </main>
+
+      <Footer />
 
       {/* Region Selector Modal */}
       <RegionSelector
