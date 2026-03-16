@@ -85,11 +85,19 @@ function SheetContent({
 
       {/* Header */}
       <div className="flex items-start justify-between gap-3 px-5 pt-4 pb-3">
-        <div className="min-w-0 flex-1">
-          <h2 className="text-xl font-bold text-card-foreground truncate">{place.place_name}</h2>
-          <span className={`mt-1.5 inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ${colorClass}`}>
-            {shortCategory}
-          </span>
+        <div className="flex items-center gap-3 min-w-0 flex-1">
+          <PlaceThumbnail
+            placeId={place.id}
+            placeName={place.place_name}
+            className="h-14 w-14 flex-shrink-0 rounded-xl"
+            fallbackSize="md"
+          />
+          <div className="min-w-0 flex-1">
+            <h2 className="text-xl font-bold text-card-foreground truncate">{place.place_name}</h2>
+            <span className={`mt-1.5 inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ${colorClass}`}>
+              {shortCategory}
+            </span>
+          </div>
         </div>
         <button onClick={onClose} className="rounded-lg p-1.5 transition-colors hover:bg-muted">
           <X className="h-5 w-5 text-muted-foreground" />
