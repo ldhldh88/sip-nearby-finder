@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { HotPlace } from "@/hooks/useNearbyBars";
+import { getKakaoSdkUrl } from "@/lib/kakao-client";
 
 declare global {
   interface Window {
@@ -14,52 +15,51 @@ interface KakaoMapProps {
   className?: string;
 }
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-const anonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
-
 let sdkLoaded = false;
 let sdkPromise: Promise<void> | null = null;
-
-async function fetchJsKey(): Promise<string> {
-  const res = await fetch(`${supabaseUrl}/functions/v1/kakao-js-key`, {
-    headers: { Authorization: `Bearer ${anonKey}`, apikey: anonKey },
-  });
-  if (!res.ok) throw new Error("Failed to fetch Kakao JS key");
-  const { key } = await res.json();
-  return key;
-}
 
 function loadKakaoSDK(): Promise<void> {
   if (sdkLoaded && window.kakao?.maps) return Promise.resolve();
   if (sdkPromise) return sdkPromise;
 
-  sdkPromise = (async () => {
-    // If script tag exists and kakao object is available, just call load
-    const existingScript = document.querySelector(`script[src*="dapi.kakao.com"]`);
-    if (existingScript && window.kakao?.maps) {
-      await new Promise<void>((resolve) =>
-        window.kakao.maps.load(() => { sdkLoaded = true; resolve(); })
-      );
-      return;
-    }
-    // Remove any previously failed script tag
+  sdkPromise = new Promise<void>((resolve, reject) => {
+    const initialize = () => {
+      if (!window.kakao?.maps) {
+        sdkPromise = null;
+        reject(new Error("Kakao Maps SDK 초기화 실패"));
+        return;
+      }
+
+      window.kakao.maps.load(() => {
+        sdkLoaded = true;
+        resolve();
+      });
+    };
+
+    const existingScript = document.querySelector<HTMLScriptElement>('script[data-kakao-sdk="true"]');
     if (existingScript) {
+      if (window.kakao?.maps) {
+        initialize();
+        return;
+      }
       existingScript.remove();
     }
-    const jsKey = await fetchJsKey();
-    await new Promise<void>((resolve, reject) => {
-      const script = document.createElement("script");
-      script.src = `https://dapi.kakao.com/v2/maps/sdk.js?appkey=${jsKey}&autoload=false`;
-      script.onload = () => {
-        window.kakao.maps.load(() => { sdkLoaded = true; resolve(); });
-      };
-      script.onerror = () => {
-        sdkPromise = null; // allow retry
-        reject(new Error("Kakao Maps SDK 로드 실패 - 도메인이 카카오 개발자 콘솔에 등록되어 있는지 확인하세요."));
-      };
-      document.head.appendChild(script);
-    });
-  })();
+
+    const script = document.createElement("script");
+    script.type = "text/javascript";
+    script.async = true;
+    script.dataset.kakaoSdk = "true";
+    script.src = getKakaoSdkUrl();
+    script.onload = initialize;
+    script.onerror = () => {
+      script.remove();
+      sdkPromise = null;
+      reject(new Error("Kakao Maps SDK 로드 실패 - JavaScript 키와 사이트 도메인 설정을 확인하세요."));
+    };
+
+    document.head.appendChild(script);
+  });
+
   return sdkPromise;
 }
 
@@ -70,7 +70,19 @@ const KakaoMap = ({ center, places, onSelectPlace, className }: KakaoMapProps) =
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
-    loadKakaoSDK().then(() => setReady(true));
+    let mounted = true;
+
+    loadKakaoSDK()
+      .then(() => {
+        if (mounted) setReady(true);
+      })
+      .catch((error) => {
+        console.error(error);
+      });
+
+    return () => {
+      mounted = false;
+    };
   }, []);
 
   // Initialize map

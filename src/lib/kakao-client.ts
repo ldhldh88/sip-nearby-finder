@@ -6,7 +6,7 @@ export function getKakaoSdkUrl() {
     autoload: "false",
   });
 
-  return `https://dapi.kakao.com/v2/maps/sdk.js?${params.toString()}`;
+  return `//dapi.kakao.com/v2/maps/sdk.js?${params.toString()}`;
 }
 
 interface KakaoStaticMapOptions {

@@ -2,6 +2,7 @@ import { motion } from "framer-motion";
 import { MapPin, Phone, ExternalLink } from "lucide-react";
 import { KakaoPlace } from "@/lib/kakao";
 import { getShortCategory, getCategoryColor } from "@/hooks/useKakaoSearch";
+import { getKakaoStaticMapUrl } from "@/lib/kakao-client";
 
 interface BarCardProps {
   place: KakaoPlace;
@@ -12,6 +13,13 @@ interface BarCardProps {
 const BarCard = ({ place, index, onClick }: BarCardProps) => {
   const shortCategory = getShortCategory(place.category_name);
   const colorClass = getCategoryColor(shortCategory);
+  const thumbnailSrc = getKakaoStaticMapUrl({
+    lat: place.y,
+    lng: place.x,
+    width: 160,
+    height: 160,
+    mapType: "roadview_hybrid",
+  });
 
   return (
     <motion.div
@@ -30,12 +38,12 @@ const BarCard = ({ place, index, onClick }: BarCardProps) => {
           style={{ outline: "1px solid rgba(0,0,0,0.08)", outlineOffset: "-1px" }}
         >
           <img
-            src={`https://dapi.kakao.com/v2/maps/staticmap?appkey=a9e2a8dfe593519da1da857de83f5156&center=${place.x},${place.y}&level=3&width=160&height=160&mapType=roadview_hybrid`}
+            src={thumbnailSrc}
             alt={place.place_name}
             className="h-full w-full object-cover"
             loading="lazy"
             onError={(e) => {
-              (e.target as HTMLImageElement).style.display = 'none';
+              (e.target as HTMLImageElement).style.display = "none";
               (e.target as HTMLImageElement).parentElement!.innerHTML = '<span class="text-2xl flex items-center justify-center h-full w-full">🍺</span>';
             }}
           />
