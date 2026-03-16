@@ -1,4 +1,4 @@
-export const KAKAO_APP_KEY = "06d3d738164f2383f9b361e0bfcc3bef";
+export const KAKAO_APP_KEY = "1d5b620dc479683422dcaabd880e8698";
 
 export function getKakaoSdkUrl() {
   const params = new URLSearchParams({
