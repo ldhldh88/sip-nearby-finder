@@ -34,11 +34,17 @@ function loadKakaoSDK(): Promise<void> {
   if (sdkPromise) return sdkPromise;
 
   sdkPromise = (async () => {
-    if (document.querySelector(`script[src*="dapi.kakao.com"]`)) {
+    // If script tag exists and kakao object is available, just call load
+    const existingScript = document.querySelector(`script[src*="dapi.kakao.com"]`);
+    if (existingScript && window.kakao?.maps) {
       await new Promise<void>((resolve) =>
         window.kakao.maps.load(() => { sdkLoaded = true; resolve(); })
       );
       return;
+    }
+    // Remove any previously failed script tag
+    if (existingScript) {
+      existingScript.remove();
     }
     const jsKey = await fetchJsKey();
     await new Promise<void>((resolve, reject) => {
@@ -47,7 +53,10 @@ function loadKakaoSDK(): Promise<void> {
       script.onload = () => {
         window.kakao.maps.load(() => { sdkLoaded = true; resolve(); });
       };
-      script.onerror = () => reject(new Error("Kakao Maps SDK 로드 실패"));
+      script.onerror = () => {
+        sdkPromise = null; // allow retry
+        reject(new Error("Kakao Maps SDK 로드 실패 - 도메인이 카카오 개발자 콘솔에 등록되어 있는지 확인하세요."));
+      };
       document.head.appendChild(script);
     });
   })();
