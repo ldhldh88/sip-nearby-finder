@@ -4,6 +4,7 @@ import { Search, X, Loader2 } from "lucide-react";
 import { useBarSearch } from "@/hooks/useBarSearch";
 import { KakaoPlace } from "@/lib/kakao";
 import { getShortCategory, getCategoryColor } from "@/hooks/useKakaoSearch";
+import { getKakaoStaticMapUrl } from "@/lib/kakao-client";
 
 interface SearchBarProps {
   onSelectPlace: (place: KakaoPlace) => void;
@@ -94,6 +95,14 @@ const SearchBar = ({ onSelectPlace }: SearchBarProps) => {
                       {results.map((place) => {
                         const short = getShortCategory(place.category_name);
                         const color = getCategoryColor(short);
+                        const thumbnailSrc = getKakaoStaticMapUrl({
+                          lat: place.y,
+                          lng: place.x,
+                          width: 80,
+                          height: 80,
+                          mapType: "roadview_hybrid",
+                        });
+
                         return (
                           <li key={place.id}>
                             <button
@@ -102,12 +111,12 @@ const SearchBar = ({ onSelectPlace }: SearchBarProps) => {
                             >
                               <div className="h-10 w-10 flex-shrink-0 rounded-lg bg-muted overflow-hidden">
                                 <img
-                                  src={`https://dapi.kakao.com/v2/maps/staticmap?appkey=a9e2a8dfe593519da1da857de83f5156&center=${place.x},${place.y}&level=3&width=80&height=80&mapType=roadview_hybrid`}
+                                  src={thumbnailSrc}
                                   alt={place.place_name}
                                   className="h-full w-full object-cover"
                                   loading="lazy"
                                   onError={(e) => {
-                                    (e.target as HTMLImageElement).style.display = 'none';
+                                    (e.target as HTMLImageElement).style.display = "none";
                                     (e.target as HTMLImageElement).parentElement!.innerHTML = '<span class="text-lg flex items-center justify-center h-full w-full">🍺</span>';
                                   }}
                                 />
