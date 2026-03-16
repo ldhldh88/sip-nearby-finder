@@ -14,34 +14,43 @@ interface KakaoMapProps {
   className?: string;
 }
 
-const KAKAO_JS_KEY = "a9e2a8dfe593519da1da857de83f5156";
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+const anonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 
 let sdkLoaded = false;
 let sdkPromise: Promise<void> | null = null;
+
+async function fetchJsKey(): Promise<string> {
+  const res = await fetch(`${supabaseUrl}/functions/v1/kakao-js-key`, {
+    headers: { Authorization: `Bearer ${anonKey}`, apikey: anonKey },
+  });
+  if (!res.ok) throw new Error("Failed to fetch Kakao JS key");
+  const { key } = await res.json();
+  return key;
+}
 
 function loadKakaoSDK(): Promise<void> {
   if (sdkLoaded && window.kakao?.maps) return Promise.resolve();
   if (sdkPromise) return sdkPromise;
 
-  sdkPromise = new Promise((resolve, reject) => {
+  sdkPromise = (async () => {
     if (document.querySelector(`script[src*="dapi.kakao.com"]`)) {
-      window.kakao.maps.load(() => {
-        sdkLoaded = true;
-        resolve();
-      });
+      await new Promise<void>((resolve) =>
+        window.kakao.maps.load(() => { sdkLoaded = true; resolve(); })
+      );
       return;
     }
-    const script = document.createElement("script");
-    script.src = `https://dapi.kakao.com/v2/maps/sdk.js?appkey=${KAKAO_JS_KEY}&autoload=false`;
-    script.onload = () => {
-      window.kakao.maps.load(() => {
-        sdkLoaded = true;
-        resolve();
-      });
-    };
-    script.onerror = () => reject(new Error("Kakao Maps SDK 로드 실패"));
-    document.head.appendChild(script);
-  });
+    const jsKey = await fetchJsKey();
+    await new Promise<void>((resolve, reject) => {
+      const script = document.createElement("script");
+      script.src = `https://dapi.kakao.com/v2/maps/sdk.js?appkey=${jsKey}&autoload=false`;
+      script.onload = () => {
+        window.kakao.maps.load(() => { sdkLoaded = true; resolve(); });
+      };
+      script.onerror = () => reject(new Error("Kakao Maps SDK 로드 실패"));
+      document.head.appendChild(script);
+    });
+  })();
   return sdkPromise;
 }
 
