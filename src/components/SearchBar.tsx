@@ -4,7 +4,7 @@ import { Search, X, Loader2 } from "lucide-react";
 import { useBarSearch } from "@/hooks/useBarSearch";
 import { KakaoPlace } from "@/lib/kakao";
 import { getShortCategory, getCategoryColor } from "@/hooks/useKakaoSearch";
-import { getKakaoStaticMapUrl } from "@/lib/kakao-client";
+import PlaceThumbnail from "@/components/PlaceThumbnail";
 
 interface SearchBarProps {
   onSelectPlace: (place: KakaoPlace) => void;
@@ -95,13 +95,6 @@ const SearchBar = ({ onSelectPlace }: SearchBarProps) => {
                       {results.map((place) => {
                         const short = getShortCategory(place.category_name);
                         const color = getCategoryColor(short);
-                        const thumbnailSrc = getKakaoStaticMapUrl({
-                          lat: place.y,
-                          lng: place.x,
-                          width: 80,
-                          height: 80,
-                          mapType: "roadview_hybrid",
-                        });
 
                         return (
                           <li key={place.id}>
@@ -109,18 +102,12 @@ const SearchBar = ({ onSelectPlace }: SearchBarProps) => {
                               onClick={() => handleSelect(place)}
                               className="flex w-full items-start gap-3 px-4 py-3 text-left transition-colors hover:bg-muted/50"
                             >
-                              <div className="h-10 w-10 flex-shrink-0 rounded-lg bg-muted overflow-hidden">
-                                <img
-                                  src={thumbnailSrc}
-                                  alt={place.place_name}
-                                  className="h-full w-full object-cover"
-                                  loading="lazy"
-                                  onError={(e) => {
-                                    (e.target as HTMLImageElement).style.display = "none";
-                                    (e.target as HTMLImageElement).parentElement!.innerHTML = '<span class="text-lg flex items-center justify-center h-full w-full">🍺</span>';
-                                  }}
-                                />
-                              </div>
+                              <PlaceThumbnail
+                                placeId={place.id}
+                                placeName={place.place_name}
+                                className="h-10 w-10 flex-shrink-0 rounded-lg"
+                                fallbackSize="sm"
+                              />
                               <div className="min-w-0 flex-1">
                                 <p className="text-sm font-semibold text-card-foreground truncate">
                                   {place.place_name}
