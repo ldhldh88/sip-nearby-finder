@@ -77,10 +77,12 @@ serve(async (req) => {
         // Sync ALL districts regardless of interval
         const { data: allDistricts, error: aErr } = await supabase
           .from('districts')
-          .select('id, name, province_id');
+          .select('id, name, province_id')
+          .order('sort_order')
+          .range(batchOffset, batchOffset + batchLimit - 1);
         if (aErr) throw aErr;
         districtIds = (allDistricts || []).map((d: any) => d.id);
-        console.log(`Sync all: processing ${districtIds.length} districts`);
+        console.log(`Sync all: processing ${districtIds.length} districts (offset: ${batchOffset}, limit: ${batchLimit})`);
       } else {
         // Find districts due for sync based on sync_interval_days
         const { data: dueDistricts, error: dErr } = await supabase
