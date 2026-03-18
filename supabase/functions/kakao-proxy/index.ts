@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -6,7 +7,7 @@ const corsHeaders = {
 };
 
 const BAR_KEYWORDS = ['술집', '호프', '와인바', '칵테일바', '포차', '이자카야', '요리주점'];
-const KAKAO_PAGE_LIMIT = 3; // Kakao max 3 pages per keyword
+const KAKAO_PAGE_LIMIT = 3;
 const KAKAO_PAGE_SIZE = 15;
 
 async function fetchAllPagesForKeyword(
@@ -79,10 +80,59 @@ serve(async (req) => {
       });
     }
 
-    // Multi-keyword mode: fetch all keywords in parallel, deduplicate
-    // Extract location from query (e.g. "강남 술집" -> "강남")
+    // Extract location from query
     const location = query.replace(/\s*술집\s*$/, '').trim() || query;
 
+    // Try cached data first
+    const supabase = createClient(
+      Deno.env.get('SUPABASE_URL')!,
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
+    );
+
+    // Find matching district by name
+    const { data: matchingDistricts } = await supabase
+      .from('districts')
+      .select('id, last_synced_at')
+      .ilike('name', `%${location}%`)
+      .limit(1);
+
+    const matchedDistrict = matchingDistricts?.[0];
+
+    if (matchedDistrict?.last_synced_at) {
+      // Serve from cache
+      const { data: cached, error: cacheErr } = await supabase
+        .from('cached_places')
+        .select('place_data')
+        .eq('district_id', matchedDistrict.id);
+
+      if (!cacheErr && cached && cached.length > 0) {
+        const allPlaces = cached.map((c: any) => c.place_data);
+        const totalCount = allPlaces.length;
+        const totalPages = Math.ceil(totalCount / size);
+        const start = (page - 1) * size;
+        const pageItems = allPlaces.slice(start, start + size);
+
+        return new Response(JSON.stringify({
+          documents: pageItems,
+          meta: {
+            total_count: totalCount,
+            pageable_count: totalCount,
+            is_end: page >= totalPages,
+          },
+          _pagination: {
+            current_page: page,
+            total_pages: totalPages,
+            page_size: size,
+          },
+          _source: 'cache',
+          _cached_at: matchedDistrict.last_synced_at,
+        }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+    }
+
+    // No cache available — fetch live from Kakao
     const allResults = await Promise.all(
       BAR_KEYWORDS.map((kw) => fetchAllPagesForKeyword(KAKAO_REST_API_KEY, location, kw)),
     );
@@ -116,6 +166,7 @@ serve(async (req) => {
         total_pages: totalPages,
         page_size: size,
       },
+      _source: 'live',
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
