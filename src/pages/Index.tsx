@@ -155,16 +155,21 @@ const Index = () => {
         {data && !isLoading && (
           <AnimatePresence mode="wait">
             <motion.div
-              key={`${selectedDistrict}-${currentPage}`}
+              key={`${selectedDistrict}-${currentPage}-${selectedThemeId}`}
               className="flex flex-col gap-3"
             >
-              {places.length > 0 ? (
-                places.map((place, i) => (
+              {filteredPlaces.length > 0 ? (
+                filteredPlaces.map((place, i) => (
                   <BarCard
                     key={place.id}
                     place={place}
                     index={i}
                     onClick={() => setDetailPlace(place)}
+                    themes={
+                      barThemesMap?.[place.id]
+                        ?.map((tid) => themeLookup[tid])
+                        .filter(Boolean) ?? []
+                    }
                   />
                 ))
               ) : (
