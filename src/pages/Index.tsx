@@ -159,11 +159,21 @@ const Index = () => {
         <HotBarSection onSelectPlace={(place) => setDetailPlace(place)} />
         <ThemeFilter selectedThemeId={selectedThemeId} onSelect={setSelectedThemeId} />
 
-        {/* Result count */}
+        {/* Result count + Sync button */}
         {!isLoading && !selectedThemeId && allPlaces.length > 0 && (
-          <p className="mb-4 text-sm text-muted-foreground">
-            총 <span className="font-semibold text-foreground">{allPlaces.length.toLocaleString()}</span>개의 술집
-          </p>
+          <div className="mb-4 flex items-center justify-between">
+            <p className="text-sm text-muted-foreground">
+              총 <span className="font-semibold text-foreground">{allPlaces.length.toLocaleString()}</span>개의 술집
+            </p>
+            <button
+              onClick={handleSync}
+              disabled={isSyncing}
+              className="flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:opacity-50"
+            >
+              <RefreshCw className={`h-3.5 w-3.5 ${isSyncing ? "animate-spin" : ""}`} />
+              {isSyncing ? "동기화 중…" : "데이터 갱신"}
+            </button>
+          </div>
         )}
         {selectedThemeId && themeFilterData && (
           <p className="mb-4 text-sm text-muted-foreground">
