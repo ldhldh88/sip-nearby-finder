@@ -56,6 +56,7 @@ serve(async (req) => {
     // Check if this is a manual call (specific district_id) or scheduled (check all due)
     let districtIds: string[] = [];
     let batchLimit = 5;
+    let batchOffset = 0;
     let syncAll = false;
 
     try {
