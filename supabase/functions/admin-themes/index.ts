@@ -223,6 +223,7 @@ serve(async (req) => {
       if (district_name !== undefined) updates.name = district_name;
       if (sort_order !== undefined) updates.sort_order = sort_order;
       if (province_id !== undefined) updates.province_id = province_id;
+      if (sync_interval_days !== undefined) updates.sync_interval_days = sync_interval_days;
       const { error } = await supabase
         .from('districts')
         .update(updates)
