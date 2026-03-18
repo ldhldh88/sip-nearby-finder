@@ -1,15 +1,17 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useQueryClient } from "@tanstack/react-query";
 
 /**
  * Debounced like hook.
- * Accumulates rapid taps and sends a single RPC-style update when tapping stops.
+ * Accumulates rapid taps and sends a single update when tapping stops.
  */
 export function useLike(kakaoPlaceId: string, initialCount: number = 0) {
   const [displayCount, setDisplayCount] = useState(initialCount);
   const pendingRef = useRef(0);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const flushing = useRef(false);
+  const queryClient = useQueryClient();
 
   // Sync initial count when it changes (e.g. data refetch)
   useEffect(() => {
@@ -25,8 +27,6 @@ export function useLike(kakaoPlaceId: string, initialCount: number = 0) {
     flushing.current = true;
 
     try {
-      // Try to upsert: increment like_count by `count`
-      // First check if row exists
       const { data: existing } = await supabase
         .from("bar_meta")
         .select("like_count")
@@ -43,19 +43,20 @@ export function useLike(kakaoPlaceId: string, initialCount: number = 0) {
           .from("bar_meta")
           .insert({ kakao_place_id: kakaoPlaceId, like_count: count });
       }
+
+      // Invalidate bar-meta cache so list updates
+      queryClient.invalidateQueries({ queryKey: ["bar-meta"] });
     } catch {
-      // Revert optimistic count on failure
       setDisplayCount((prev) => prev - count);
     } finally {
       flushing.current = false;
     }
-  }, [kakaoPlaceId]);
+  }, [kakaoPlaceId, queryClient]);
 
   const like = useCallback(() => {
     pendingRef.current += 1;
     setDisplayCount((prev) => prev + 1);
 
-    // Reset debounce timer
     if (timerRef.current) clearTimeout(timerRef.current);
     timerRef.current = setTimeout(() => {
       flush();
