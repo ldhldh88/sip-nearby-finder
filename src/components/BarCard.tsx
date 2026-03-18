@@ -54,6 +54,14 @@ const BarCard = ({ place, index, onClick, themes }: BarCardProps) => {
             <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${colorClass}`}>
               {shortCategory}
             </span>
+            {themes && themes.length > 0 && themes.map((theme) => (
+              <span
+                key={theme.id}
+                className="inline-flex rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary"
+              >
+                {theme.name}
+              </span>
+            ))}
             {place.distance && (
               <span className="flex items-center gap-0.5 text-xs text-muted-foreground tabular-nums">
                 <MapPin className="h-3 w-3" />
