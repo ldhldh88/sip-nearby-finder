@@ -194,6 +194,7 @@ const Index = () => {
                   place={place}
                   index={i}
                   onClick={() => setDetailPlace(place)}
+                  likeCount={likeCounts?.[place.id] ?? 0}
                   themes={
                     mergedThemesMap?.[place.id]
                       ?.map((tid) => themeLookup[tid])
