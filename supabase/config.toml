@@ -11,3 +11,6 @@ verify_jwt = false
 
 [functions.admin-themes]
 verify_jwt = false
+
+[functions.sync-places]
+verify_jwt = false
