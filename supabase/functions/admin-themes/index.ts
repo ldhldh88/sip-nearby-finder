@@ -38,7 +38,7 @@ serve(async (req) => {
     );
 
     const body = await req.json();
-    const { action, kakao_place_id, theme_id, theme_name, new_name, province_id, province_name, district_id, district_name, sort_order, sync_interval_days } = body;
+    const { action, kakao_place_id, theme_id, theme_name, new_name, province_id, province_name, district_id, district_name, sort_order, sync_interval_days, place_data } = body;
 
     // === Bar-theme linking ===
     if (action === 'get_themes') {
