@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, keepPreviousData } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { KakaoPlace } from "@/lib/kakao";
 
@@ -47,39 +47,40 @@ export function useBarThemes(placeIds: string[]) {
 }
 
 /**
- * Fetch all bars tagged with a specific theme in a specific district.
- * Returns KakaoPlace[] from cached_places that have the given theme.
- * Also returns bars with the theme that might not be in the district cache.
+ * Single-query theme filtering:
+ * 1. Get all kakao_place_ids tagged with the theme
+ * 2. Fetch matching cached_places in the district
+ * Uses keepPreviousData to prevent flickering on filter change.
  */
 export function useThemeFilteredBars(themeId: string | null, districtName: string | null) {
   return useQuery({
     queryKey: ["theme-filtered-bars", themeId, districtName],
     queryFn: async () => {
-      if (!themeId) return null;
+      if (!themeId || !districtName) return { places: [], themeMap: {} };
 
-      // Get all place IDs with this theme
-      const { data: themeEntries, error: tErr } = await supabase
-        .from("bar_themes")
-        .select("kakao_place_id")
-        .eq("theme_id", themeId);
-      if (tErr) throw tErr;
+      // Parallel: fetch theme place IDs + district ID
+      const location = districtName.split("/")[0]?.trim();
 
-      const placeIds = (themeEntries || []).map((e) => e.kakao_place_id);
-      if (placeIds.length === 0) return { places: [], themeMap: {} };
-
-      // Find district ID
-      const location = districtName?.split("/")[0]?.trim();
-      let districtId: string | null = null;
-      if (location) {
-        const { data: districts } = await supabase
+      const [themeResult, districtResult] = await Promise.all([
+        supabase
+          .from("bar_themes")
+          .select("kakao_place_id")
+          .eq("theme_id", themeId),
+        supabase
           .from("districts")
           .select("id")
           .ilike("name", `%${location}%`)
-          .limit(1);
-        districtId = districts?.[0]?.id ?? null;
-      }
+          .limit(1),
+      ]);
 
-      // Get cached place data for these IDs (from current district or any district)
+      if (themeResult.error) throw themeResult.error;
+
+      const placeIds = (themeResult.data || []).map((e) => e.kakao_place_id);
+      if (placeIds.length === 0) return { places: [], themeMap: {} };
+
+      const districtId = districtResult.data?.[0]?.id;
+
+      // Fetch cached places matching theme place IDs in this district
       let query = supabase
         .from("cached_places")
         .select("kakao_place_id, place_data")
@@ -96,7 +97,6 @@ export function useThemeFilteredBars(themeId: string | null, districtName: strin
         (c) => c.place_data as unknown as KakaoPlace
       );
 
-      // Build theme map for these places
       const themeMap: Record<string, string[]> = {};
       for (const id of placeIds) {
         if (!themeMap[id]) themeMap[id] = [];
@@ -107,5 +107,6 @@ export function useThemeFilteredBars(themeId: string | null, districtName: strin
     },
     enabled: !!themeId,
     staleTime: 60 * 1000,
+    placeholderData: keepPreviousData,
   });
 }
