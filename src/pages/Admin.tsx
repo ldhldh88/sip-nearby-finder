@@ -8,6 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useBarSearch } from "@/hooks/useBarSearch";
 import { KakaoPlace } from "@/lib/kakao";
 import { Lock, Search, MapPin, Tag, Plus, Pencil, Trash2, Store } from "lucide-react";
+import AdminRegions from "@/components/AdminRegions";
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const anonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
@@ -177,6 +178,7 @@ export default function Admin() {
           <TabsList className="mb-4">
             <TabsTrigger value="link">테마 연결</TabsTrigger>
             <TabsTrigger value="manage">테마 관리</TabsTrigger>
+            <TabsTrigger value="regions">지역 관리</TabsTrigger>
           </TabsList>
 
           {/* === Tab: 테마 연결 === */}
@@ -308,6 +310,11 @@ export default function Admin() {
                 {themes.length === 0 && <p className="text-sm text-muted-foreground">등록된 테마가 없습니다.</p>}
               </div>
             )}
+          </TabsContent>
+
+          {/* === Tab: 지역 관리 === */}
+          <TabsContent value="regions">
+            <AdminRegions token={token} />
           </TabsContent>
         </Tabs>
       </div>

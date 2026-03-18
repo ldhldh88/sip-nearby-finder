@@ -1,7 +1,7 @@
 import { useState, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, Search } from "lucide-react";
-import { REGIONS } from "@/data/regions";
+import { useRegions } from "@/hooks/useRegions";
 import { useIsMobile } from "@/hooks/use-mobile";
 
 interface RegionSelectorProps {
@@ -16,12 +16,13 @@ const spring = { type: "spring" as const, stiffness: 400, damping: 30 };
 
 const RegionSelector = ({ open, onClose, onSelect, selectedProvince, selectedDistrict }: RegionSelectorProps) => {
   const isMobile = useIsMobile();
+  const { data: REGIONS } = useRegions();
   const [activeProvince, setActiveProvince] = useState(selectedProvince || "서울");
   const [searchQuery, setSearchQuery] = useState("");
 
   const activeRegion = useMemo(() => {
     return REGIONS.find((r) => r.province === activeProvince);
-  }, [activeProvince]);
+  }, [activeProvince, REGIONS]);
 
   const filteredDistricts = useMemo(() => {
     if (!searchQuery.trim()) return activeRegion?.districts || [];
@@ -36,7 +37,7 @@ const RegionSelector = ({ open, onClose, onSelect, selectedProvince, selectedDis
       });
     });
     return results.map((r) => r.district);
-  }, [searchQuery, activeRegion]);
+  }, [searchQuery, activeRegion, REGIONS]);
 
   const handleSelectAll = () => {
     onSelect(activeProvince, null);

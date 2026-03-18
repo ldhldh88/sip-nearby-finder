@@ -37,7 +37,8 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     );
 
-    const { action, kakao_place_id, theme_id, theme_name, new_name } = await req.json();
+    const body = await req.json();
+    const { action, kakao_place_id, theme_id, theme_name, new_name, province_id, province_name, district_id, district_name, sort_order } = body;
 
     // === Bar-theme linking ===
     if (action === 'get_themes') {
@@ -145,6 +146,100 @@ serve(async (req) => {
       }));
 
       return new Response(JSON.stringify({ themes: result }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    // === Region CRUD ===
+    if (action === 'list_regions') {
+      const { data: provinces, error: pErr } = await supabase
+        .from('provinces')
+        .select('*')
+        .order('sort_order');
+      if (pErr) throw pErr;
+
+      const { data: districts, error: dErr } = await supabase
+        .from('districts')
+        .select('*')
+        .order('sort_order');
+      if (dErr) throw dErr;
+
+      return new Response(JSON.stringify({ provinces, districts }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    if (action === 'create_province') {
+      const { data, error } = await supabase
+        .from('provinces')
+        .insert({ name: province_name, sort_order: sort_order ?? 999 })
+        .select()
+        .single();
+      if (error) throw error;
+      return new Response(JSON.stringify({ province: data }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    if (action === 'update_province') {
+      const updates: Record<string, any> = {};
+      if (province_name !== undefined) updates.name = province_name;
+      if (sort_order !== undefined) updates.sort_order = sort_order;
+      const { error } = await supabase
+        .from('provinces')
+        .update(updates)
+        .eq('id', province_id);
+      if (error) throw error;
+      return new Response(JSON.stringify({ ok: true }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    if (action === 'delete_province') {
+      const { error } = await supabase
+        .from('provinces')
+        .delete()
+        .eq('id', province_id);
+      if (error) throw error;
+      return new Response(JSON.stringify({ ok: true }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    if (action === 'create_district') {
+      const { data, error } = await supabase
+        .from('districts')
+        .insert({ province_id, name: district_name, sort_order: sort_order ?? 999 })
+        .select()
+        .single();
+      if (error) throw error;
+      return new Response(JSON.stringify({ district: data }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    if (action === 'update_district') {
+      const updates: Record<string, any> = {};
+      if (district_name !== undefined) updates.name = district_name;
+      if (sort_order !== undefined) updates.sort_order = sort_order;
+      if (province_id !== undefined) updates.province_id = province_id;
+      const { error } = await supabase
+        .from('districts')
+        .update(updates)
+        .eq('id', district_id);
+      if (error) throw error;
+      return new Response(JSON.stringify({ ok: true }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    if (action === 'delete_district') {
+      const { error } = await supabase
+        .from('districts')
+        .delete()
+        .eq('id', district_id);
+      if (error) throw error;
+      return new Response(JSON.stringify({ ok: true }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
