@@ -16,12 +16,13 @@ const spring = { type: "spring" as const, stiffness: 400, damping: 30 };
 
 const RegionSelector = ({ open, onClose, onSelect, selectedProvince, selectedDistrict }: RegionSelectorProps) => {
   const isMobile = useIsMobile();
+  const { data: REGIONS } = useRegions();
   const [activeProvince, setActiveProvince] = useState(selectedProvince || "서울");
   const [searchQuery, setSearchQuery] = useState("");
 
   const activeRegion = useMemo(() => {
     return REGIONS.find((r) => r.province === activeProvince);
-  }, [activeProvince]);
+  }, [activeProvince, REGIONS]);
 
   const filteredDistricts = useMemo(() => {
     if (!searchQuery.trim()) return activeRegion?.districts || [];
