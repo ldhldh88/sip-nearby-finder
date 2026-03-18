@@ -176,7 +176,7 @@ const Index = () => {
                   index={i}
                   onClick={() => setDetailPlace(place)}
                   themes={
-                    barThemesMap?.[place.id]
+                    mergedThemesMap?.[place.id]
                       ?.map((tid) => themeLookup[tid])
                       .filter(Boolean) ?? []
                   }
