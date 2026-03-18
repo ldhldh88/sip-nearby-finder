@@ -37,7 +37,7 @@ const RegionSelector = ({ open, onClose, onSelect, selectedProvince, selectedDis
       });
     });
     return results.map((r) => r.district);
-  }, [searchQuery, activeRegion]);
+  }, [searchQuery, activeRegion, REGIONS]);
 
   const handleSelectAll = () => {
     onSelect(activeProvince, null);
