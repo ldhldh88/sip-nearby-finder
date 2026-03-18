@@ -9,6 +9,7 @@ import BarDetailSheet from "@/components/BarDetailSheet";
 import HotBarSection from "@/components/HotBarSection";
 import ThemeFilter from "@/components/ThemeFilter";
 import { useKakaoSearch } from "@/hooks/useKakaoSearch";
+import { useBarLikeCounts } from "@/hooks/useBarLikeCounts";
 import { useThemes, useBarThemes, useThemeFilteredBars } from "@/hooks/useThemes";
 import { KakaoPlace } from "@/lib/kakao";
 import Footer from "@/components/Footer";
