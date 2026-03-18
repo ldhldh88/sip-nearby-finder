@@ -1,6 +1,7 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { useSearchParams } from "react-router-dom";
-import { ChevronDown, Loader2 } from "lucide-react";
+import { ChevronDown, Loader2, RefreshCw } from "lucide-react";
+import { useQueryClient } from "@tanstack/react-query";
 import RegionSelector from "@/components/RegionSelector";
 import BarCard from "@/components/BarCard";
 import SearchBar from "@/components/SearchBar";
@@ -10,13 +11,17 @@ import ThemeFilter from "@/components/ThemeFilter";
 import { useDistrictBars } from "@/hooks/useDistrictBars";
 import { useThemes, useBarThemes, useThemeFilteredBars } from "@/hooks/useThemes";
 import { KakaoPlace } from "@/lib/kakao";
+import { supabase } from "@/integrations/supabase/client";
 import Footer from "@/components/Footer";
+import { toast } from "sonner";
 
 const Index = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const [regionOpen, setRegionOpen] = useState(false);
   const [detailPlace, setDetailPlace] = useState<KakaoPlace | null>(null);
   const [selectedThemeId, setSelectedThemeId] = useState<string | null>(null);
+  const [isSyncing, setIsSyncing] = useState(false);
+  const queryClient = useQueryClient();
 
   const selectedProvince = searchParams.get("province") || "서울";
   const selectedDistrict = searchParams.get("district") || "강남/역삼/삼성/논현";
@@ -36,6 +41,38 @@ const Index = () => {
     if (district) params.set("district", district);
     setSearchParams(params);
   };
+
+  const handleSync = useCallback(async () => {
+    if (isSyncing) return;
+    setIsSyncing(true);
+    try {
+      // Find district ID
+      const location = selectedDistrict.split("/")[0]?.trim();
+      const { data: districts } = await supabase
+        .from("districts")
+        .select("id")
+        .ilike("name", `%${location}%`)
+        .limit(1);
+      const districtId = districts?.[0]?.id;
+      if (!districtId) {
+        toast.error("지역을 찾을 수 없어요");
+        return;
+      }
+
+      const { error } = await supabase.functions.invoke("sync-places", {
+        body: { district_id: districtId },
+      });
+      if (error) throw error;
+
+      toast.success("동기화 완료! 리스트를 새로고침합니다");
+      queryClient.invalidateQueries({ queryKey: ["district-bars"] });
+    } catch (e) {
+      toast.error("동기화에 실패했어요");
+      console.error(e);
+    } finally {
+      setIsSyncing(false);
+    }
+  }, [selectedDistrict, isSyncing, queryClient]);
 
   const regionLabel = selectedDistrict
     ? selectedDistrict
@@ -122,11 +159,21 @@ const Index = () => {
         <HotBarSection onSelectPlace={(place) => setDetailPlace(place)} />
         <ThemeFilter selectedThemeId={selectedThemeId} onSelect={setSelectedThemeId} />
 
-        {/* Result count */}
+        {/* Result count + Sync button */}
         {!isLoading && !selectedThemeId && allPlaces.length > 0 && (
-          <p className="mb-4 text-sm text-muted-foreground">
-            총 <span className="font-semibold text-foreground">{allPlaces.length.toLocaleString()}</span>개의 술집
-          </p>
+          <div className="mb-4 flex items-center justify-between">
+            <p className="text-sm text-muted-foreground">
+              총 <span className="font-semibold text-foreground">{allPlaces.length.toLocaleString()}</span>개의 술집
+            </p>
+            <button
+              onClick={handleSync}
+              disabled={isSyncing}
+              className="flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:opacity-50"
+            >
+              <RefreshCw className={`h-3.5 w-3.5 ${isSyncing ? "animate-spin" : ""}`} />
+              {isSyncing ? "동기화 중…" : "데이터 갱신"}
+            </button>
+          </div>
         )}
         {selectedThemeId && themeFilterData && (
           <p className="mb-4 text-sm text-muted-foreground">
