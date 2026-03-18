@@ -3,6 +3,7 @@ import { MapPin, Phone, ExternalLink } from "lucide-react";
 import { KakaoPlace } from "@/lib/kakao";
 import { getShortCategory, getCategoryColor } from "@/hooks/useKakaoSearch";
 import PlaceThumbnail from "@/components/PlaceThumbnail";
+import LikeButton from "@/components/LikeButton";
 import { Theme } from "@/hooks/useThemes";
 
 interface BarCardProps {
@@ -10,9 +11,10 @@ interface BarCardProps {
   index: number;
   onClick?: () => void;
   themes?: Theme[];
+  likeCount?: number;
 }
 
-const BarCard = ({ place, index, onClick, themes }: BarCardProps) => {
+const BarCard = ({ place, index, onClick, themes, likeCount = 0 }: BarCardProps) => {
   const shortCategory = getShortCategory(place.category_name);
   const colorClass = getCategoryColor(shortCategory);
 
@@ -43,7 +45,10 @@ const BarCard = ({ place, index, onClick, themes }: BarCardProps) => {
               <h3 className="text-lg font-semibold text-card-foreground truncate">
                 {place.place_name}
               </h3>
-              <ExternalLink className="h-4 w-4 flex-shrink-0 text-muted-foreground" />
+              <div className="flex items-center gap-2 flex-shrink-0">
+                <LikeButton kakaoPlaceId={place.id} initialCount={likeCount} />
+                <ExternalLink className="h-4 w-4 text-muted-foreground" />
+              </div>
             </div>
             <p className="mt-0.5 text-sm text-muted-foreground line-clamp-1">
               {place.road_address_name || place.address_name}

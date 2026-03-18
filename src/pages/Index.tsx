@@ -9,6 +9,7 @@ import BarDetailSheet from "@/components/BarDetailSheet";
 import HotBarSection from "@/components/HotBarSection";
 import ThemeFilter from "@/components/ThemeFilter";
 import { useKakaoSearch } from "@/hooks/useKakaoSearch";
+import { useBarLikeCounts } from "@/hooks/useBarLikeCounts";
 import { useThemes, useBarThemes, useThemeFilteredBars } from "@/hooks/useThemes";
 import { KakaoPlace } from "@/lib/kakao";
 import Footer from "@/components/Footer";
@@ -73,6 +74,7 @@ const Index = () => {
   const { data: allThemes } = useThemes();
   const placeIds = useMemo(() => allPlaces.map((p) => p.id), [allPlaces]);
   const { data: barThemesMap } = useBarThemes(placeIds);
+  const { data: likeCounts } = useBarLikeCounts(placeIds);
 
   // DB-level theme filtering: fetch bars with the selected theme in this district
   const { data: themeFilterData, isLoading: isThemeLoading } = useThemeFilteredBars(
@@ -192,6 +194,7 @@ const Index = () => {
                   place={place}
                   index={i}
                   onClick={() => setDetailPlace(place)}
+                  likeCount={likeCounts?.[place.id] ?? 0}
                   themes={
                     mergedThemesMap?.[place.id]
                       ?.map((tid) => themeLookup[tid])
