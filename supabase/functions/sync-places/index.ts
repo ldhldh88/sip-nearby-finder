@@ -53,9 +53,8 @@ serve(async (req) => {
       });
     }
 
-    // Check if this is a scheduled call (sync all due districts) or manual (specific district_id)
+    // Check if this is a manual call (specific district_id) or scheduled (check all due)
     let districtIds: string[] = [];
-    let isScheduled = false;
 
     try {
       const body = await req.json();
@@ -63,12 +62,11 @@ serve(async (req) => {
         districtIds = [body.district_id];
       }
     } catch {
-      // No body = scheduled call
-      isScheduled = true;
+      // No body or parse error = scheduled call, find due districts
     }
 
-    if (isScheduled || districtIds.length === 0) {
-      // Find districts that are due for sync
+    if (districtIds.length === 0) {
+      // Find districts due for sync based on sync_interval_days
       const { data: dueDistricts, error: dErr } = await supabase
         .from('districts')
         .select('id, name, sync_interval_days, last_synced_at, province_id')
@@ -79,13 +77,14 @@ serve(async (req) => {
 
       const now = new Date();
       const due = (dueDistricts || []).filter((d: any) => {
-        if (!d.last_synced_at) return true;
+        if (!d.last_synced_at) return true; // Never synced
         const lastSync = new Date(d.last_synced_at);
         const diffDays = (now.getTime() - lastSync.getTime()) / (1000 * 60 * 60 * 24);
         return diffDays >= d.sync_interval_days;
       });
 
       districtIds = due.map((d: any) => d.id);
+      console.log(`Scheduled sync: ${due.length} districts due out of ${dueDistricts?.length || 0} configured`);
     }
 
     if (districtIds.length === 0) {
@@ -101,28 +100,19 @@ serve(async (req) => {
       .in('id', districtIds);
     if (fetchErr) throw fetchErr;
 
-    // Get province names for search queries
-    const provinceIds = [...new Set((districtsToSync || []).map((d: any) => d.province_id))];
-    const { data: provinces } = await supabase
-      .from('provinces')
-      .select('id, name')
-      .in('id', provinceIds);
-    const provinceMap: Record<string, string> = {};
-    for (const p of provinces || []) {
-      provinceMap[p.id] = p.name.replace('\n', ' ');
-    }
-
     let totalSynced = 0;
+    let totalPlaces = 0;
 
     for (const district of districtsToSync || []) {
       const location = district.name;
+      console.log(`Syncing district: ${location}`);
 
       // Fetch from Kakao using multi-keyword strategy
       const allResults = await Promise.all(
         BAR_KEYWORDS.map((kw) => fetchAllPagesForKeyword(KAKAO_REST_API_KEY, location, kw)),
       );
 
-      // Deduplicate
+      // Deduplicate by place id
       const seen = new Set<string>();
       const unique: any[] = [];
       for (const docs of allResults) {
@@ -134,15 +124,15 @@ serve(async (req) => {
         }
       }
 
-      // Upsert into cached_places
-      if (unique.length > 0) {
-        // Delete old cached data for this district first
-        await supabase
-          .from('cached_places')
-          .delete()
-          .eq('district_id', district.id);
+      console.log(`  Found ${unique.length} unique places for ${location}`);
 
-        // Insert new data in batches
+      // Replace cached data: delete old, insert new
+      await supabase
+        .from('cached_places')
+        .delete()
+        .eq('district_id', district.id);
+
+      if (unique.length > 0) {
         const batchSize = 50;
         for (let i = 0; i < unique.length; i += batchSize) {
           const batch = unique.slice(i, i + batchSize).map((doc: any) => ({
@@ -151,9 +141,14 @@ serve(async (req) => {
             place_data: doc,
             updated_at: new Date().toISOString(),
           }));
-          await supabase
+
+          const { error: upsertErr } = await supabase
             .from('cached_places')
             .upsert(batch, { onConflict: 'district_id,kakao_place_id' });
+
+          if (upsertErr) {
+            console.error(`  Batch upsert error for ${location}:`, upsertErr.message);
+          }
         }
       }
 
@@ -164,12 +159,14 @@ serve(async (req) => {
         .eq('id', district.id);
 
       totalSynced++;
-      console.log(`Synced ${district.name}: ${unique.length} places`);
+      totalPlaces += unique.length;
+      console.log(`  Completed sync for ${location}: ${unique.length} places cached`);
     }
 
     return new Response(JSON.stringify({
-      message: `Synced ${totalSynced} districts`,
+      message: `Synced ${totalSynced} district(s), ${totalPlaces} total places`,
       synced: totalSynced,
+      total_places: totalPlaces,
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });

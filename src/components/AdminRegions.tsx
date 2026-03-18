@@ -2,7 +2,8 @@ import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Pencil, Trash2, GripVertical, MapPin, ChevronRight } from "lucide-react";
+import { Plus, Pencil, Trash2, MapPin, ChevronRight, RefreshCw, Clock } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const anonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
@@ -18,6 +19,8 @@ interface District {
   province_id: string;
   name: string;
   sort_order: number;
+  sync_interval_days: number | null;
+  last_synced_at: string | null;
 }
 
 function adminFetch(token: string, body: Record<string, unknown>) {
@@ -36,11 +39,31 @@ interface Props {
   token: string;
 }
 
+const SYNC_OPTIONS = [
+  { value: "0", label: "동기화 안함" },
+  { value: "1", label: "매일" },
+  { value: "3", label: "3일마다" },
+  { value: "7", label: "매주" },
+];
+
+function formatLastSync(dateStr: string | null): string {
+  if (!dateStr) return "동기화 안됨";
+  const d = new Date(dateStr);
+  const now = new Date();
+  const diffMs = now.getTime() - d.getTime();
+  const diffH = Math.floor(diffMs / (1000 * 60 * 60));
+  if (diffH < 1) return "방금 전";
+  if (diffH < 24) return `${diffH}시간 전`;
+  const diffD = Math.floor(diffH / 24);
+  return `${diffD}일 전`;
+}
+
 export default function AdminRegions({ token }: Props) {
   const [provinces, setProvinces] = useState<Province[]>([]);
   const [districts, setDistricts] = useState<District[]>([]);
   const [loading, setLoading] = useState(false);
   const [selectedProvinceId, setSelectedProvinceId] = useState<string | null>(null);
+  const [syncingIds, setSyncingIds] = useState<Set<string>>(new Set());
 
   // Province editing
   const [newProvinceName, setNewProvinceName] = useState("");
@@ -131,6 +154,32 @@ export default function AdminRegions({ token }: Props) {
     if (!confirm("이 지역을 삭제하시겠습니까?")) return;
     await adminFetch(token, { action: "delete_district", district_id: id });
     loadRegions();
+  }
+
+  async function setSyncInterval(districtId: string, days: number) {
+    await adminFetch(token, {
+      action: "update_district",
+      district_id: districtId,
+      sync_interval_days: days || null,
+    });
+    loadRegions();
+  }
+
+  async function triggerSync(districtId: string) {
+    setSyncingIds((prev) => new Set(prev).add(districtId));
+    try {
+      await adminFetch(token, {
+        action: "trigger_sync",
+        district_id: districtId,
+      });
+      loadRegions();
+    } finally {
+      setSyncingIds((prev) => {
+        const next = new Set(prev);
+        next.delete(districtId);
+        return next;
+      });
+    }
   }
 
   async function moveDistrict(id: string, direction: "up" | "down") {
@@ -284,56 +333,96 @@ export default function AdminRegions({ token }: Props) {
               </Button>
             </div>
 
-            <div className="space-y-1 max-h-[60vh] overflow-y-auto">
+            <div className="space-y-1.5 max-h-[60vh] overflow-y-auto">
               {filteredDistricts.map((dist, idx) => (
                 <div
                   key={dist.id}
-                  className="flex items-center gap-2 px-3 py-2 rounded-lg border border-border"
+                  className="rounded-lg border border-border overflow-hidden"
                 >
-                  {editingDistrictId === dist.id ? (
-                    <>
-                      <Input
-                        className="flex-1 h-8"
-                        value={editDistrictName}
-                        onChange={(e) => setEditDistrictName(e.target.value)}
-                        onKeyDown={(e) => e.key === "Enter" && renameDistrict(dist.id)}
-                        autoFocus
-                      />
-                      <Button size="sm" onClick={() => renameDistrict(dist.id)}>저장</Button>
-                      <Button size="sm" variant="ghost" onClick={() => setEditingDistrictId(null)}>취소</Button>
-                    </>
-                  ) : (
-                    <>
-                      <div className="flex flex-col gap-0.5">
-                        <button
-                          onClick={() => moveDistrict(dist.id, "up")}
-                          disabled={idx === 0}
-                          className="text-muted-foreground hover:text-foreground disabled:opacity-30 text-xs"
-                        >▲</button>
-                        <button
-                          onClick={() => moveDistrict(dist.id, "down")}
-                          disabled={idx === filteredDistricts.length - 1}
-                          className="text-muted-foreground hover:text-foreground disabled:opacity-30 text-xs"
-                        >▼</button>
-                      </div>
-                      <span className="flex-1 text-sm">{dist.name}</span>
-                      <Button
-                        size="icon"
-                        variant="ghost"
-                        className="h-7 w-7"
-                        onClick={() => { setEditingDistrictId(dist.id); setEditDistrictName(dist.name); }}
+                  {/* Main row */}
+                  <div className="flex items-center gap-2 px-3 py-2">
+                    {editingDistrictId === dist.id ? (
+                      <>
+                        <Input
+                          className="flex-1 h-8"
+                          value={editDistrictName}
+                          onChange={(e) => setEditDistrictName(e.target.value)}
+                          onKeyDown={(e) => e.key === "Enter" && renameDistrict(dist.id)}
+                          autoFocus
+                        />
+                        <Button size="sm" onClick={() => renameDistrict(dist.id)}>저장</Button>
+                        <Button size="sm" variant="ghost" onClick={() => setEditingDistrictId(null)}>취소</Button>
+                      </>
+                    ) : (
+                      <>
+                        <div className="flex flex-col gap-0.5">
+                          <button
+                            onClick={() => moveDistrict(dist.id, "up")}
+                            disabled={idx === 0}
+                            className="text-muted-foreground hover:text-foreground disabled:opacity-30 text-xs"
+                          >▲</button>
+                          <button
+                            onClick={() => moveDistrict(dist.id, "down")}
+                            disabled={idx === filteredDistricts.length - 1}
+                            className="text-muted-foreground hover:text-foreground disabled:opacity-30 text-xs"
+                          >▼</button>
+                        </div>
+                        <span className="flex-1 text-sm font-medium">{dist.name}</span>
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          className="h-7 w-7"
+                          onClick={() => { setEditingDistrictId(dist.id); setEditDistrictName(dist.name); }}
+                        >
+                          <Pencil className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          className="h-7 w-7 text-destructive"
+                          onClick={() => deleteDistrict(dist.id)}
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                      </>
+                    )}
+                  </div>
+
+                  {/* Sync controls row */}
+                  {editingDistrictId !== dist.id && (
+                    <div className="flex items-center gap-2 px-3 py-2 bg-muted/30 border-t border-border">
+                      <Clock className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
+                      <Select
+                        value={String(dist.sync_interval_days || 0)}
+                        onValueChange={(v) => setSyncInterval(dist.id, parseInt(v))}
                       >
-                        <Pencil className="h-3.5 w-3.5" />
-                      </Button>
+                        <SelectTrigger className="h-7 w-28 text-xs">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {SYNC_OPTIONS.map((opt) => (
+                            <SelectItem key={opt.value} value={opt.value} className="text-xs">
+                              {opt.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+
+                      <span className="text-xs text-muted-foreground flex-1">
+                        {formatLastSync(dist.last_synced_at)}
+                      </span>
+
                       <Button
-                        size="icon"
-                        variant="ghost"
-                        className="h-7 w-7 text-destructive"
-                        onClick={() => deleteDistrict(dist.id)}
+                        size="sm"
+                        variant="outline"
+                        className="h-7 text-xs gap-1"
+                        disabled={syncingIds.has(dist.id)}
+                        onClick={() => triggerSync(dist.id)}
                       >
-                        <Trash2 className="h-3.5 w-3.5" />
+                        <RefreshCw className={`h-3 w-3 ${syncingIds.has(dist.id) ? "animate-spin" : ""}`} />
+                        {syncingIds.has(dist.id) ? "동기화 중..." : "지금 동기화"}
                       </Button>
-                    </>
+                    </div>
                   )}
                 </div>
               ))}
