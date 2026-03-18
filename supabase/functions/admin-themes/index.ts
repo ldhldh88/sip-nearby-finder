@@ -38,7 +38,7 @@ serve(async (req) => {
     );
 
     const body = await req.json();
-    const { action, kakao_place_id, theme_id, theme_name, new_name, province_id, province_name, district_id, district_name, sort_order } = body;
+    const { action, kakao_place_id, theme_id, theme_name, new_name, province_id, province_name, district_id, district_name, sort_order, sync_interval_days } = body;
 
     // === Bar-theme linking ===
     if (action === 'get_themes') {
@@ -223,6 +223,7 @@ serve(async (req) => {
       if (district_name !== undefined) updates.name = district_name;
       if (sort_order !== undefined) updates.sort_order = sort_order;
       if (province_id !== undefined) updates.province_id = province_id;
+      if (sync_interval_days !== undefined) updates.sync_interval_days = sync_interval_days;
       const { error } = await supabase
         .from('districts')
         .update(updates)
@@ -240,6 +241,23 @@ serve(async (req) => {
         .eq('id', district_id);
       if (error) throw error;
       return new Response(JSON.stringify({ ok: true }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    if (action === 'trigger_sync') {
+      // Manually trigger sync for a specific district
+      const syncUrl = `${Deno.env.get('SUPABASE_URL')}/functions/v1/sync-places`;
+      const syncRes = await fetch(syncUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')}`,
+        },
+        body: JSON.stringify({ district_id }),
+      });
+      const syncData = await syncRes.json();
+      return new Response(JSON.stringify(syncData), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
