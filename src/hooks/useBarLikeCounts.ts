@@ -1,23 +1,59 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
-export function useBarLikeCounts(placeIds: string[]) {
+export interface BarMeta {
+  like_count: number;
+  view_count: number;
+  bookmark_count: number;
+  hot_score: number;
+}
+
+const EMPTY_META: BarMeta = { like_count: 0, view_count: 0, bookmark_count: 0, hot_score: 0 };
+
+export type BarMetaMap = Record<string, BarMeta>;
+
+export function useBarMeta(placeIds: string[]) {
   return useQuery({
-    queryKey: ["bar-like-counts", placeIds],
-    queryFn: async () => {
+    queryKey: ["bar-meta", placeIds],
+    queryFn: async (): Promise<BarMetaMap> => {
       if (placeIds.length === 0) return {};
       const { data } = await supabase
         .from("bar_meta")
-        .select("kakao_place_id, like_count")
+        .select("kakao_place_id, like_count, view_count, bookmark_count, hot_score")
         .in("kakao_place_id", placeIds);
 
-      const map: Record<string, number> = {};
+      const map: BarMetaMap = {};
       for (const row of data || []) {
-        map[row.kakao_place_id] = row.like_count;
+        map[row.kakao_place_id] = {
+          like_count: row.like_count,
+          view_count: row.view_count,
+          bookmark_count: row.bookmark_count,
+          hot_score: row.hot_score,
+        };
       }
       return map;
     },
     enabled: placeIds.length > 0,
     staleTime: 30_000,
   });
+}
+
+/** Compute a composite popularity score for sorting */
+export function computePopularity(meta: BarMeta): number {
+  // hot_score already factors time-weighted views, likes, bookmarks
+  // But we also blend in raw counts for tie-breaking
+  return meta.hot_score * 10 + meta.like_count * 3 + meta.bookmark_count * 2 + meta.view_count * 0.1;
+}
+
+/** @deprecated Use useBarMeta instead */
+export function useBarLikeCounts(placeIds: string[]) {
+  const query = useBarMeta(placeIds);
+  return {
+    ...query,
+    data: query.data
+      ? Object.fromEntries(
+          Object.entries(query.data).map(([id, meta]) => [id, meta.like_count])
+        )
+      : undefined,
+  };
 }
