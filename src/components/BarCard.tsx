@@ -3,6 +3,7 @@ import { MapPin, Phone, ExternalLink } from "lucide-react";
 import { KakaoPlace } from "@/lib/kakao";
 import { getShortCategory, getCategoryColor } from "@/hooks/useKakaoSearch";
 import PlaceThumbnail from "@/components/PlaceThumbnail";
+import LikeButton from "@/components/LikeButton";
 import { Theme } from "@/hooks/useThemes";
 
 interface BarCardProps {
@@ -10,6 +11,7 @@ interface BarCardProps {
   index: number;
   onClick?: () => void;
   themes?: Theme[];
+  likeCount?: number;
 }
 
 const BarCard = ({ place, index, onClick, themes }: BarCardProps) => {
