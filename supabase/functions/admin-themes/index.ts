@@ -149,6 +149,136 @@ serve(async (req) => {
       });
     }
 
+    // === Region CRUD ===
+    if (action === 'list_regions') {
+      const { data: provinces, error: pErr } = await supabase
+        .from('provinces')
+        .select('*')
+        .order('sort_order');
+      if (pErr) throw pErr;
+
+      const { data: districts, error: dErr } = await supabase
+        .from('districts')
+        .select('*')
+        .order('sort_order');
+      if (dErr) throw dErr;
+
+      return new Response(JSON.stringify({ provinces, districts }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    if (action === 'create_province') {
+      const { province_name, sort_order } = await req.json().catch(() => ({}));
+      const { data, error } = await supabase
+        .from('provinces')
+        .insert({ name: province_name || theme_name, sort_order: sort_order ?? 999 })
+        .select()
+        .single();
+      if (error) throw error;
+      return new Response(JSON.stringify({ province: data }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    if (action === 'update_province') {
+      const { province_id, province_name: pName, sort_order: pSort } = await req.json().catch(() => ({}));
+      const updates: Record<string, any> = {};
+      if (pName !== undefined) updates.name = pName;
+      if (pSort !== undefined) updates.sort_order = pSort;
+      const { error } = await supabase
+        .from('provinces')
+        .update(updates)
+        .eq('id', province_id || theme_id);
+      if (error) throw error;
+      return new Response(JSON.stringify({ ok: true }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    if (action === 'delete_province') {
+      const { province_id } = await req.json().catch(() => ({}));
+      const { error } = await supabase
+        .from('provinces')
+        .delete()
+        .eq('id', province_id || theme_id);
+      if (error) throw error;
+      return new Response(JSON.stringify({ ok: true }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    if (action === 'create_district') {
+      const { province_id, district_name, sort_order } = await req.json().catch(() => ({}));
+      const { data, error } = await supabase
+        .from('districts')
+        .insert({ province_id, name: district_name, sort_order: sort_order ?? 999 })
+        .select()
+        .single();
+      if (error) throw error;
+      return new Response(JSON.stringify({ district: data }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    if (action === 'update_district') {
+      const { district_id, district_name, sort_order, province_id: newProvinceId } = await req.json().catch(() => ({}));
+      const updates: Record<string, any> = {};
+      if (district_name !== undefined) updates.name = district_name;
+      if (sort_order !== undefined) updates.sort_order = sort_order;
+      if (newProvinceId !== undefined) updates.province_id = newProvinceId;
+      const { error } = await supabase
+        .from('districts')
+        .update(updates)
+        .eq('id', district_id);
+      if (error) throw error;
+      return new Response(JSON.stringify({ ok: true }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    if (action === 'delete_district') {
+      const { district_id } = await req.json().catch(() => ({}));
+      const { error } = await supabase
+        .from('districts')
+        .delete()
+        .eq('id', district_id);
+      if (error) throw error;
+      return new Response(JSON.stringify({ ok: true }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    return new Response(JSON.stringify({ error: 'Invalid action' }), {
+      status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
+      const { data: themes, error: tErr } = await supabase
+        .from('themes')
+        .select('*')
+        .order('name');
+      if (tErr) throw tErr;
+
+      // Get counts per theme
+      const { data: counts, error: cErr } = await supabase
+        .from('bar_themes')
+        .select('theme_id');
+      if (cErr) throw cErr;
+
+      const countMap: Record<string, number> = {};
+      for (const row of counts || []) {
+        countMap[row.theme_id] = (countMap[row.theme_id] || 0) + 1;
+      }
+
+      const result = (themes || []).map((t: any) => ({
+        ...t,
+        bar_count: countMap[t.id] || 0,
+      }));
+
+      return new Response(JSON.stringify({ themes: result }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
     return new Response(JSON.stringify({ error: 'Invalid action' }), {
       status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
