@@ -1,3 +1,5 @@
+import { supabase } from "@/integrations/supabase/client";
+
 export interface KakaoPlace {
   id: string;
   place_name: string;
@@ -12,35 +14,69 @@ export interface KakaoPlace {
   distance: string;
 }
 
-interface KakaoSearchResponse {
-  documents: KakaoPlace[];
-  meta: {
-    is_end: boolean;
-    pageable_count: number;
-    total_count: number;
-    same_name?: {
-      keyword: string;
-      region: string[];
-      selected_region: string;
-    };
-  };
+interface SearchResult {
+  places: KakaoPlace[];
+  isEnd: boolean;
+  total: number;
+  pageableCount: number;
+  currentPage: number;
+  totalPages: number;
 }
 
 function getSearchQuery(district: string): string {
   return district.split("/")[0];
 }
 
+/**
+ * Try to load from cached_places DB first.
+ * Falls back to kakao-proxy edge function if no cache exists.
+ */
 export async function searchBars(
   district: string,
   page = 1,
   size = 15
-): Promise<{ places: KakaoPlace[]; isEnd: boolean; total: number; pageableCount: number; currentPage: number; totalPages: number }> {
+): Promise<SearchResult> {
+  // 1. Find district in DB
+  const location = getSearchQuery(district);
+
+  const { data: districts } = await supabase
+    .from("districts")
+    .select("id, last_synced_at")
+    .ilike("name", `%${location}%`)
+    .limit(1);
+
+  const matched = districts?.[0];
+
+  // 2. If synced, serve from cached_places
+  if (matched?.last_synced_at) {
+    const { data: cached, error } = await supabase
+      .from("cached_places")
+      .select("place_data")
+      .eq("district_id", matched.id);
+
+    if (!error && cached && cached.length > 0) {
+      const allPlaces = cached.map((c) => c.place_data as unknown as KakaoPlace);
+      const totalCount = allPlaces.length;
+      const totalPages = Math.ceil(totalCount / size);
+      const start = (page - 1) * size;
+      const pageItems = allPlaces.slice(start, start + size);
+
+      return {
+        places: pageItems,
+        isEnd: page >= totalPages,
+        total: totalCount,
+        pageableCount: totalCount,
+        currentPage: page,
+        totalPages,
+      };
+    }
+  }
+
+  // 3. Fallback: call kakao-proxy edge function
   const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
   const anonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 
-  const location = getSearchQuery(district);
   const query = `${location} 술집`;
-
   const params = new URLSearchParams({
     query,
     page: String(page),
@@ -62,7 +98,7 @@ export async function searchBars(
     throw new Error(`Kakao API error: ${res.status}`);
   }
 
-  const data: KakaoSearchResponse = await res.json();
+  const data = await res.json();
   const totalCount = data.meta.total_count;
   const pageableCount = data.meta.pageable_count;
   const totalPages = Math.ceil(pageableCount / size);
