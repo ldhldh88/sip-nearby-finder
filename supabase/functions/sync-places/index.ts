@@ -55,7 +55,8 @@ serve(async (req) => {
 
     // Check if this is a manual call (specific district_id) or scheduled (check all due)
     let districtIds: string[] = [];
-    let batchLimit = 5; // Process max 5 districts per invocation
+    let batchLimit = 5;
+    let syncAll = false;
 
     try {
       const body = await req.json();
@@ -65,31 +66,43 @@ serve(async (req) => {
       if (body.batch_limit) {
         batchLimit = body.batch_limit;
       }
+      if (body.sync_all) {
+        syncAll = true;
+      }
     } catch {
       // No body or parse error = scheduled call, find due districts
     }
 
     if (districtIds.length === 0) {
-      // Find districts due for sync based on sync_interval_days
-      const { data: dueDistricts, error: dErr } = await supabase
-        .from('districts')
-        .select('id, name, sync_interval_days, last_synced_at, province_id')
-        .not('sync_interval_days', 'is', null)
-        .gt('sync_interval_days', 0);
+      if (syncAll) {
+        // Sync ALL districts regardless of interval
+        const { data: allDistricts, error: aErr } = await supabase
+          .from('districts')
+          .select('id, name, province_id');
+        if (aErr) throw aErr;
+        districtIds = (allDistricts || []).map((d: any) => d.id);
+        console.log(`Sync all: processing ${districtIds.length} districts`);
+      } else {
+        // Find districts due for sync based on sync_interval_days
+        const { data: dueDistricts, error: dErr } = await supabase
+          .from('districts')
+          .select('id, name, sync_interval_days, last_synced_at, province_id')
+          .not('sync_interval_days', 'is', null)
+          .gt('sync_interval_days', 0);
 
-      if (dErr) throw dErr;
+        if (dErr) throw dErr;
 
-      const now = new Date();
-      const due = (dueDistricts || []).filter((d: any) => {
-        if (!d.last_synced_at) return true; // Never synced
-        const lastSync = new Date(d.last_synced_at);
-        const diffDays = (now.getTime() - lastSync.getTime()) / (1000 * 60 * 60 * 24);
-        return diffDays >= d.sync_interval_days;
-      });
+        const now = new Date();
+        const due = (dueDistricts || []).filter((d: any) => {
+          if (!d.last_synced_at) return true;
+          const lastSync = new Date(d.last_synced_at);
+          const diffDays = (now.getTime() - lastSync.getTime()) / (1000 * 60 * 60 * 24);
+          return diffDays >= d.sync_interval_days;
+        });
 
-      // Only take batchLimit districts
-      districtIds = due.slice(0, batchLimit).map((d: any) => d.id);
-      console.log(`Scheduled sync: processing ${districtIds.length} of ${due.length} due districts (batch limit: ${batchLimit})`);
+        districtIds = due.slice(0, batchLimit).map((d: any) => d.id);
+        console.log(`Scheduled sync: processing ${districtIds.length} of ${due.length} due districts (batch limit: ${batchLimit})`);
+      }
     }
 
     if (districtIds.length === 0) {
