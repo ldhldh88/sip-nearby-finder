@@ -20,6 +20,8 @@ const Index = () => {
   const [regionOpen, setRegionOpen] = useState(false);
   const [detailPlace, setDetailPlace] = useState<KakaoPlace | null>(null);
   const [selectedThemeId, setSelectedThemeId] = useState<string | null>(null);
+  const [isSyncing, setIsSyncing] = useState(false);
+  const queryClient = useQueryClient();
 
   const selectedProvince = searchParams.get("province") || "서울";
   const selectedDistrict = searchParams.get("district") || "강남/역삼/삼성/논현";
