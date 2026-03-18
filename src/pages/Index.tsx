@@ -1,6 +1,7 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { useSearchParams } from "react-router-dom";
-import { ChevronDown, Loader2 } from "lucide-react";
+import { ChevronDown, Loader2, RefreshCw } from "lucide-react";
+import { useQueryClient } from "@tanstack/react-query";
 import RegionSelector from "@/components/RegionSelector";
 import BarCard from "@/components/BarCard";
 import SearchBar from "@/components/SearchBar";
@@ -10,7 +11,9 @@ import ThemeFilter from "@/components/ThemeFilter";
 import { useDistrictBars } from "@/hooks/useDistrictBars";
 import { useThemes, useBarThemes, useThemeFilteredBars } from "@/hooks/useThemes";
 import { KakaoPlace } from "@/lib/kakao";
+import { supabase } from "@/integrations/supabase/client";
 import Footer from "@/components/Footer";
+import { toast } from "sonner";
 
 const Index = () => {
   const [searchParams, setSearchParams] = useSearchParams();
