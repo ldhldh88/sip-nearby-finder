@@ -80,7 +80,8 @@ function SheetContent({
   mapSrc: string;
 }) {
   const { photos } = usePlacePhoto(place.id);
-
+  const { data: metaMap } = useBarMeta([place.id]);
+  const likeCount = metaMap?.[place.id]?.like_count ?? 0;
   return (
     <div className="flex flex-col">
       {/* Handle bar for mobile */}
