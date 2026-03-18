@@ -1,0 +1,1 @@
+ALTER TABLE public.bar_themes DROP CONSTRAINT IF EXISTS bar_themes_user_id_fkey;
