@@ -1,16 +1,20 @@
-import { useQuery } from "@tanstack/react-query";
+import { useInfiniteQuery } from "@tanstack/react-query";
 import { searchBars, KakaoPlace } from "@/lib/kakao";
 
 const ITEMS_PER_PAGE = 15;
 
-export function useKakaoSearch(district: string | null, page: number = 1) {
-  return useQuery({
-    queryKey: ["kakao-bars", district, page],
-    queryFn: () => searchBars(district!, page, ITEMS_PER_PAGE),
+export function useKakaoSearch(district: string | null) {
+  return useInfiniteQuery({
+    queryKey: ["kakao-bars", district],
+    queryFn: ({ pageParam = 1 }) => searchBars(district!, pageParam, ITEMS_PER_PAGE),
+    initialPageParam: 1,
+    getNextPageParam: (lastPage) => {
+      if (lastPage.isEnd || lastPage.currentPage >= lastPage.totalPages) return undefined;
+      return lastPage.currentPage + 1;
+    },
     enabled: !!district,
     staleTime: 24 * 60 * 60 * 1000,
     gcTime: 24 * 60 * 60 * 1000,
-    placeholderData: (prev) => prev, // keep previous data while loading next page
   });
 }
 
