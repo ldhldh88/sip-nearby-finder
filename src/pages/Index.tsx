@@ -103,11 +103,20 @@ const Index = () => {
   }, [barThemesMap, themeFilterData]);
 
   // When theme is selected, show DB-queried results; otherwise show all cached
+  // Sort places by composite popularity score from bar_meta
   const filteredPlaces = useMemo(() => {
-    if (!selectedThemeId) return allPlaces;
-    if (themeFilterData?.places) return themeFilterData.places;
-    return [];
-  }, [allPlaces, selectedThemeId, themeFilterData]);
+    const places = selectedThemeId
+      ? (themeFilterData?.places ?? [])
+      : allPlaces;
+
+    if (!barMetaMap || Object.keys(barMetaMap).length === 0) return places;
+
+    return [...places].sort((a, b) => {
+      const scoreA = computePopularity(barMetaMap[a.id] ?? { like_count: 0, view_count: 0, bookmark_count: 0, hot_score: 0 });
+      const scoreB = computePopularity(barMetaMap[b.id] ?? { like_count: 0, view_count: 0, bookmark_count: 0, hot_score: 0 });
+      return scoreB - scoreA;
+    });
+  }, [allPlaces, selectedThemeId, themeFilterData, barMetaMap]);
 
   return (
     <div className="min-h-screen bg-background">
