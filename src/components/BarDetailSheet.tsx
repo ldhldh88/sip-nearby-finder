@@ -46,13 +46,14 @@ const BarDetailSheet = ({ place, onClose }: BarDetailSheetProps) => {
               <SheetContent place={place} onClose={onClose} shortCategory={shortCategory} colorClass={colorClass} mapSrc={mapSrc} />
             </motion.div>
           ) : (
-            <div className="fixed inset-0 z-50 flex items-center justify-center">
+            <div className="fixed inset-0 z-50 flex items-center justify-center" onClick={onClose}>
               <motion.div
                 className="w-full max-w-lg overflow-hidden rounded-2xl bg-card shadow-xl"
                 initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.95 }}
                 transition={spring}
+                onClick={(e) => e.stopPropagation()}
               >
                 <SheetContent place={place} onClose={onClose} shortCategory={shortCategory} colorClass={colorClass} mapSrc={mapSrc} />
               </motion.div>
