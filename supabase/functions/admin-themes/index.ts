@@ -252,36 +252,6 @@ serve(async (req) => {
     return new Response(JSON.stringify({ error: 'Invalid action' }), {
       status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
-      const { data: themes, error: tErr } = await supabase
-        .from('themes')
-        .select('*')
-        .order('name');
-      if (tErr) throw tErr;
-
-      // Get counts per theme
-      const { data: counts, error: cErr } = await supabase
-        .from('bar_themes')
-        .select('theme_id');
-      if (cErr) throw cErr;
-
-      const countMap: Record<string, number> = {};
-      for (const row of counts || []) {
-        countMap[row.theme_id] = (countMap[row.theme_id] || 0) + 1;
-      }
-
-      const result = (themes || []).map((t: any) => ({
-        ...t,
-        bar_count: countMap[t.id] || 0,
-      }));
-
-      return new Response(JSON.stringify({ themes: result }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-
-    return new Response(JSON.stringify({ error: 'Invalid action' }), {
-      status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
   } catch (error) {
     return new Response(JSON.stringify({ error: error.message }), {
       status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
