@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useSearchParams } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChevronDown, Wine, Loader2, ChevronLeft, ChevronRight } from "lucide-react";
@@ -7,7 +7,9 @@ import BarCard from "@/components/BarCard";
 import SearchBar from "@/components/SearchBar";
 import BarDetailSheet from "@/components/BarDetailSheet";
 import HotBarSection from "@/components/HotBarSection";
+import ThemeFilter from "@/components/ThemeFilter";
 import { useKakaoSearch, ITEMS_PER_PAGE } from "@/hooks/useKakaoSearch";
+import { useThemes, useBarThemes } from "@/hooks/useThemes";
 import { KakaoPlace } from "@/lib/kakao";
 import { Button } from "@/components/ui/button";
 import Footer from "@/components/Footer";
@@ -16,6 +18,7 @@ const Index = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const [regionOpen, setRegionOpen] = useState(false);
   const [detailPlace, setDetailPlace] = useState<KakaoPlace | null>(null);
+  const [selectedThemeId, setSelectedThemeId] = useState<string | null>(null);
 
   // Read state from URL
   const selectedProvince = searchParams.get("province") || "서울";
@@ -52,6 +55,24 @@ const Index = () => {
   const total = data?.total ?? 0;
   const pageableCount = data?.pageableCount ?? 0;
   const totalPages = data?.totalPages ?? 1;
+
+  // Fetch themes data
+  const { data: allThemes } = useThemes();
+  const placeIds = useMemo(() => places.map((p) => p.id), [places]);
+  const { data: barThemesMap } = useBarThemes(placeIds);
+
+  // Build theme lookup: themeId -> Theme
+  const themeLookup = useMemo(() => {
+    const map: Record<string, { id: string; name: string; icon_url: string | null }> = {};
+    for (const t of allThemes || []) map[t.id] = t;
+    return map;
+  }, [allThemes]);
+
+  // Filter places by selected theme
+  const filteredPlaces = useMemo(() => {
+    if (!selectedThemeId || !barThemesMap) return places;
+    return places.filter((p) => barThemesMap[p.id]?.includes(selectedThemeId));
+  }, [places, selectedThemeId, barThemesMap]);
 
   // Generate page numbers to show
   const getPageNumbers = () => {
@@ -98,6 +119,9 @@ const Index = () => {
         {/* Hot Bars Section */}
         <HotBarSection onSelectPlace={(place) => setDetailPlace(place)} />
 
+        {/* Theme Filter */}
+        <ThemeFilter selectedThemeId={selectedThemeId} onSelect={setSelectedThemeId} />
+
         {/* Result count */}
         {data && !isLoading && (
           <p className="mb-4 text-sm text-muted-foreground">
@@ -131,16 +155,21 @@ const Index = () => {
         {data && !isLoading && (
           <AnimatePresence mode="wait">
             <motion.div
-              key={`${selectedDistrict}-${currentPage}`}
+              key={`${selectedDistrict}-${currentPage}-${selectedThemeId}`}
               className="flex flex-col gap-3"
             >
-              {places.length > 0 ? (
-                places.map((place, i) => (
+              {filteredPlaces.length > 0 ? (
+                filteredPlaces.map((place, i) => (
                   <BarCard
                     key={place.id}
                     place={place}
                     index={i}
                     onClick={() => setDetailPlace(place)}
+                    themes={
+                      barThemesMap?.[place.id]
+                        ?.map((tid) => themeLookup[tid])
+                        .filter(Boolean) ?? []
+                    }
                   />
                 ))
               ) : (

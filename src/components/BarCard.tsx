@@ -3,14 +3,16 @@ import { MapPin, Phone, ExternalLink } from "lucide-react";
 import { KakaoPlace } from "@/lib/kakao";
 import { getShortCategory, getCategoryColor } from "@/hooks/useKakaoSearch";
 import PlaceThumbnail from "@/components/PlaceThumbnail";
+import { Theme } from "@/hooks/useThemes";
 
 interface BarCardProps {
   place: KakaoPlace;
   index: number;
   onClick?: () => void;
+  themes?: Theme[];
 }
 
-const BarCard = ({ place, index, onClick }: BarCardProps) => {
+const BarCard = ({ place, index, onClick, themes }: BarCardProps) => {
   const shortCategory = getShortCategory(place.category_name);
   const colorClass = getCategoryColor(shortCategory);
 
@@ -52,6 +54,14 @@ const BarCard = ({ place, index, onClick }: BarCardProps) => {
             <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${colorClass}`}>
               {shortCategory}
             </span>
+            {themes && themes.length > 0 && themes.map((theme) => (
+              <span
+                key={theme.id}
+                className="inline-flex rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary"
+              >
+                {theme.name}
+              </span>
+            ))}
             {place.distance && (
               <span className="flex items-center gap-0.5 text-xs text-muted-foreground tabular-nums">
                 <MapPin className="h-3 w-3" />
