@@ -6,6 +6,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import PlaceThumbnail from "@/components/PlaceThumbnail";
 import LikeButton from "@/components/LikeButton";
 import { usePlacePhoto } from "@/hooks/usePlacePhoto";
+import { useBarMeta } from "@/hooks/useBarLikeCounts";
 
 interface BarDetailSheetProps {
   place: KakaoPlace | null;
