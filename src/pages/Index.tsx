@@ -9,7 +9,7 @@ import BarDetailSheet from "@/components/BarDetailSheet";
 import HotBarSection from "@/components/HotBarSection";
 import ThemeFilter from "@/components/ThemeFilter";
 import { useKakaoSearch } from "@/hooks/useKakaoSearch";
-import { useThemes, useBarThemes } from "@/hooks/useThemes";
+import { useThemes, useBarThemes, useThemeFilteredBars } from "@/hooks/useThemes";
 import { KakaoPlace } from "@/lib/kakao";
 import Footer from "@/components/Footer";
 
@@ -74,17 +74,38 @@ const Index = () => {
   const placeIds = useMemo(() => allPlaces.map((p) => p.id), [allPlaces]);
   const { data: barThemesMap } = useBarThemes(placeIds);
 
+  // DB-level theme filtering: fetch bars with the selected theme in this district
+  const { data: themeFilterData, isLoading: isThemeLoading } = useThemeFilteredBars(
+    selectedThemeId,
+    selectedDistrict
+  );
+
   const themeLookup = useMemo(() => {
     const map: Record<string, { id: string; name: string; icon_url: string | null }> = {};
     for (const t of allThemes || []) map[t.id] = t;
     return map;
   }, [allThemes]);
 
-  // Filter places by selected theme
+  // Merge theme maps
+  const mergedThemesMap = useMemo(() => {
+    const merged = { ...barThemesMap };
+    if (themeFilterData?.themeMap) {
+      for (const [id, themes] of Object.entries(themeFilterData.themeMap)) {
+        if (!merged[id]) merged[id] = [];
+        for (const t of themes) {
+          if (!merged[id].includes(t)) merged[id].push(t);
+        }
+      }
+    }
+    return merged;
+  }, [barThemesMap, themeFilterData]);
+
+  // When theme is selected, show DB-queried results; otherwise show all cached
   const filteredPlaces = useMemo(() => {
-    if (!selectedThemeId || !barThemesMap) return allPlaces;
-    return allPlaces.filter((p) => barThemesMap[p.id]?.includes(selectedThemeId));
-  }, [allPlaces, selectedThemeId, barThemesMap]);
+    if (!selectedThemeId) return allPlaces;
+    if (themeFilterData?.places) return themeFilterData.places;
+    return [];
+  }, [allPlaces, selectedThemeId, themeFilterData]);
 
   return (
     <div className="min-h-screen bg-background">
@@ -117,9 +138,14 @@ const Index = () => {
         <ThemeFilter selectedThemeId={selectedThemeId} onSelect={setSelectedThemeId} />
 
         {/* Result count */}
-        {data && !isLoading && (
+        {data && !isLoading && !selectedThemeId && (
           <p className="mb-4 text-sm text-muted-foreground">
             총 <span className="font-semibold text-foreground">{total.toLocaleString()}</span>개의 술집
+          </p>
+        )}
+        {selectedThemeId && themeFilterData && (
+          <p className="mb-4 text-sm text-muted-foreground">
+            테마 필터 결과 <span className="font-semibold text-foreground">{filteredPlaces.length}</span>개의 술집
           </p>
         )}
 
@@ -150,7 +176,7 @@ const Index = () => {
                   index={i}
                   onClick={() => setDetailPlace(place)}
                   themes={
-                    barThemesMap?.[place.id]
+                    mergedThemesMap?.[place.id]
                       ?.map((tid) => themeLookup[tid])
                       .filter(Boolean) ?? []
                   }

@@ -100,6 +100,7 @@ export default function Admin() {
       action: isLinked ? "unlink" : "link",
       kakao_place_id: selectedBar.id,
       theme_id: themeId,
+      place_data: isLinked ? undefined : selectedBar,
     });
     setLinkedThemes((prev) =>
       isLinked ? prev.filter((id) => id !== themeId) : [...prev, themeId]
