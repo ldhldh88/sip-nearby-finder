@@ -138,9 +138,14 @@ const Index = () => {
         <ThemeFilter selectedThemeId={selectedThemeId} onSelect={setSelectedThemeId} />
 
         {/* Result count */}
-        {data && !isLoading && (
+        {data && !isLoading && !selectedThemeId && (
           <p className="mb-4 text-sm text-muted-foreground">
             총 <span className="font-semibold text-foreground">{total.toLocaleString()}</span>개의 술집
+          </p>
+        )}
+        {selectedThemeId && themeFilterData && (
+          <p className="mb-4 text-sm text-muted-foreground">
+            테마 필터 결과 <span className="font-semibold text-foreground">{filteredPlaces.length}</span>개의 술집
           </p>
         )}
 
