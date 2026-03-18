@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useSearchParams } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChevronDown, Wine, Loader2, ChevronLeft, ChevronRight } from "lucide-react";
@@ -7,7 +7,9 @@ import BarCard from "@/components/BarCard";
 import SearchBar from "@/components/SearchBar";
 import BarDetailSheet from "@/components/BarDetailSheet";
 import HotBarSection from "@/components/HotBarSection";
+import ThemeFilter from "@/components/ThemeFilter";
 import { useKakaoSearch, ITEMS_PER_PAGE } from "@/hooks/useKakaoSearch";
+import { useThemes, useBarThemes } from "@/hooks/useThemes";
 import { KakaoPlace } from "@/lib/kakao";
 import { Button } from "@/components/ui/button";
 import Footer from "@/components/Footer";
