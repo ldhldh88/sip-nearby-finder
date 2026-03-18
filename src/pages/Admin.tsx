@@ -311,6 +311,11 @@ export default function Admin() {
               </div>
             )}
           </TabsContent>
+
+          {/* === Tab: 지역 관리 === */}
+          <TabsContent value="regions">
+            <AdminRegions token={token} />
+          </TabsContent>
         </Tabs>
       </div>
     </div>
