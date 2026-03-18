@@ -134,7 +134,7 @@ serve(async (req) => {
         }
       }
 
-      console.log(`  Found ${unique.length} unique places for ${location}`);
+      console.log(`  Found ${unique.length} unique places for ${district.name}`);
 
       // Replace cached data: delete old, insert new
       await supabase
