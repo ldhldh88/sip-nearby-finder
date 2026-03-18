@@ -119,6 +119,9 @@ const Index = () => {
         {/* Hot Bars Section */}
         <HotBarSection onSelectPlace={(place) => setDetailPlace(place)} />
 
+        {/* Theme Filter */}
+        <ThemeFilter selectedThemeId={selectedThemeId} onSelect={setSelectedThemeId} />
+
         {/* Result count */}
         {data && !isLoading && (
           <p className="mb-4 text-sm text-muted-foreground">
