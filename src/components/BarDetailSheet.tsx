@@ -6,6 +6,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import PlaceThumbnail from "@/components/PlaceThumbnail";
 import LikeButton from "@/components/LikeButton";
 import { usePlacePhoto } from "@/hooks/usePlacePhoto";
+import { useBarMeta } from "@/hooks/useBarLikeCounts";
 
 interface BarDetailSheetProps {
   place: KakaoPlace | null;
@@ -79,7 +80,8 @@ function SheetContent({
   mapSrc: string;
 }) {
   const { photos } = usePlacePhoto(place.id);
-
+  const { data: metaMap } = useBarMeta([place.id]);
+  const likeCount = metaMap?.[place.id]?.like_count ?? 0;
   return (
     <div className="flex flex-col">
       {/* Handle bar for mobile */}
@@ -119,7 +121,7 @@ function SheetContent({
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <LikeButton kakaoPlaceId={place.id} />
+          <LikeButton kakaoPlaceId={place.id} initialCount={likeCount} />
           <button onClick={onClose} className="rounded-lg p-1.5 transition-colors hover:bg-muted">
             <X className="h-5 w-5 text-muted-foreground" />
           </button>
