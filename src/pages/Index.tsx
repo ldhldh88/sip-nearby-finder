@@ -9,7 +9,7 @@ import BarDetailSheet from "@/components/BarDetailSheet";
 import HotBarSection from "@/components/HotBarSection";
 import ThemeFilter from "@/components/ThemeFilter";
 import { useKakaoSearch } from "@/hooks/useKakaoSearch";
-import { useBarLikeCounts } from "@/hooks/useBarLikeCounts";
+import { useBarMeta, computePopularity } from "@/hooks/useBarLikeCounts";
 import { useThemes, useBarThemes, useThemeFilteredBars } from "@/hooks/useThemes";
 import { KakaoPlace } from "@/lib/kakao";
 import Footer from "@/components/Footer";
@@ -74,7 +74,7 @@ const Index = () => {
   const { data: allThemes } = useThemes();
   const placeIds = useMemo(() => allPlaces.map((p) => p.id), [allPlaces]);
   const { data: barThemesMap } = useBarThemes(placeIds);
-  const { data: likeCounts } = useBarLikeCounts(placeIds);
+  const { data: barMetaMap } = useBarMeta(placeIds);
 
   // DB-level theme filtering: fetch bars with the selected theme in this district
   const { data: themeFilterData, isLoading: isThemeLoading } = useThemeFilteredBars(
@@ -103,11 +103,20 @@ const Index = () => {
   }, [barThemesMap, themeFilterData]);
 
   // When theme is selected, show DB-queried results; otherwise show all cached
+  // Sort places by composite popularity score from bar_meta
   const filteredPlaces = useMemo(() => {
-    if (!selectedThemeId) return allPlaces;
-    if (themeFilterData?.places) return themeFilterData.places;
-    return [];
-  }, [allPlaces, selectedThemeId, themeFilterData]);
+    const places = selectedThemeId
+      ? (themeFilterData?.places ?? [])
+      : allPlaces;
+
+    if (!barMetaMap || Object.keys(barMetaMap).length === 0) return places;
+
+    return [...places].sort((a, b) => {
+      const scoreA = computePopularity(barMetaMap[a.id] ?? { like_count: 0, view_count: 0, bookmark_count: 0, hot_score: 0 });
+      const scoreB = computePopularity(barMetaMap[b.id] ?? { like_count: 0, view_count: 0, bookmark_count: 0, hot_score: 0 });
+      return scoreB - scoreA;
+    });
+  }, [allPlaces, selectedThemeId, themeFilterData, barMetaMap]);
 
   return (
     <div className="min-h-screen bg-background">
@@ -194,7 +203,7 @@ const Index = () => {
                   place={place}
                   index={i}
                   onClick={() => setDetailPlace(place)}
-                  likeCount={likeCounts?.[place.id] ?? 0}
+                  likeCount={barMetaMap?.[place.id]?.like_count ?? 0}
                   themes={
                     mergedThemesMap?.[place.id]
                       ?.map((tid) => themeLookup[tid])
