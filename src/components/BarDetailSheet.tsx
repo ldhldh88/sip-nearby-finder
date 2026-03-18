@@ -117,9 +117,12 @@ function SheetContent({
             </span>
           </div>
         </div>
-        <button onClick={onClose} className="rounded-lg p-1.5 transition-colors hover:bg-muted">
-          <X className="h-5 w-5 text-muted-foreground" />
-        </button>
+        <div className="flex items-center gap-2">
+          <LikeButton kakaoPlaceId={place.id} />
+          <button onClick={onClose} className="rounded-lg p-1.5 transition-colors hover:bg-muted">
+            <X className="h-5 w-5 text-muted-foreground" />
+          </button>
+        </div>
       </div>
 
       {/* Map preview */}
