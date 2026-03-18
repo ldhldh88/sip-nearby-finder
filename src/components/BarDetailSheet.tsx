@@ -4,6 +4,7 @@ import { KakaoPlace } from "@/lib/kakao";
 import { getShortCategory, getCategoryColor } from "@/hooks/useKakaoSearch";
 import { useIsMobile } from "@/hooks/use-mobile";
 import PlaceThumbnail from "@/components/PlaceThumbnail";
+import LikeButton from "@/components/LikeButton";
 import { usePlacePhoto } from "@/hooks/usePlacePhoto";
 
 interface BarDetailSheetProps {
