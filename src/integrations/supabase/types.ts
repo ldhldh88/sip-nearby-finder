@@ -242,7 +242,17 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      get_district_bars: {
+        Args: { p_district_name: string }
+        Returns: {
+          bookmark_count: number
+          hot_score: number
+          kakao_place_id: string
+          like_count: number
+          place_data: Json
+          view_count: number
+        }[]
+      }
     }
     Enums: {
       [_ in never]: never
