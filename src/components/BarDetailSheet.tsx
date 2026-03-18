@@ -1,5 +1,6 @@
+import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, MapPin, Phone, ExternalLink, Navigation } from "lucide-react";
+import { X, MapPin, Phone, ExternalLink, Navigation, Plus, Loader2 } from "lucide-react";
 import { KakaoPlace } from "@/lib/kakao";
 import { getShortCategory, getCategoryColor } from "@/hooks/useKakaoSearch";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -7,6 +8,11 @@ import PlaceThumbnail from "@/components/PlaceThumbnail";
 import LikeButton from "@/components/LikeButton";
 import { usePlacePhoto } from "@/hooks/usePlacePhoto";
 import { useBarMeta } from "@/hooks/useBarLikeCounts";
+import { usePlaceDistricts } from "@/hooks/usePlaceDistricts";
+import { useRegionsRaw } from "@/hooks/useRegions";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
+import { useQueryClient } from "@tanstack/react-query";
 
 interface BarDetailSheetProps {
   place: KakaoPlace | null;
@@ -66,6 +72,77 @@ const BarDetailSheet = ({ place, onClose }: BarDetailSheetProps) => {
   );
 };
 
+function DistrictAssigner({ place }: { place: KakaoPlace }) {
+  const [selectedDistrictId, setSelectedDistrictId] = useState("");
+  const [isSaving, setIsSaving] = useState(false);
+  const { data: regionsData } = useRegionsRaw();
+  const queryClient = useQueryClient();
+
+  const handleSave = async () => {
+    if (!selectedDistrictId) return;
+    setIsSaving(true);
+    try {
+      const { error } = await supabase.functions.invoke("add-place-to-cache", {
+        body: {
+          district_id: selectedDistrictId,
+          kakao_place_id: place.id,
+          place_data: place,
+        },
+      });
+      if (error) throw error;
+
+      toast.success("동네에 등록되었어요!");
+      queryClient.invalidateQueries({ queryKey: ["place-districts"] });
+      queryClient.invalidateQueries({ queryKey: ["district-bars"] });
+    } catch (e) {
+      console.error(e);
+      toast.error("등록에 실패했어요");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const provinces = regionsData?.provinces ?? [];
+  const districts = regionsData?.districts ?? [];
+
+  return (
+    <div className="mx-5 mb-4 rounded-xl border border-dashed border-primary/30 bg-primary/5 p-3">
+      <p className="mb-2 text-xs font-medium text-primary">
+        <Plus className="mr-1 inline-block h-3 w-3" />
+        이 술집이 속한 동네를 선택해 주세요
+      </p>
+      <div className="flex gap-2">
+        <select
+          value={selectedDistrictId}
+          onChange={(e) => setSelectedDistrictId(e.target.value)}
+          className="flex-1 rounded-lg border border-border bg-card px-3 py-2 text-sm text-card-foreground outline-none focus:ring-2 focus:ring-primary/30"
+        >
+          <option value="">동네 선택…</option>
+          {provinces.map((p) => (
+            <optgroup key={p.id} label={p.name}>
+              {districts
+                .filter((d) => d.province_id === p.id)
+                .map((d) => (
+                  <option key={d.id} value={d.id}>
+                    {d.name}
+                  </option>
+                ))}
+            </optgroup>
+          ))}
+        </select>
+        <button
+          onClick={handleSave}
+          disabled={!selectedDistrictId || isSaving}
+          className="flex items-center gap-1.5 rounded-lg bg-primary px-3 py-2 text-sm font-medium text-primary-foreground transition-transform active:scale-95 disabled:opacity-50"
+        >
+          {isSaving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Plus className="h-3.5 w-3.5" />}
+          등록
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function SheetContent({
   place,
   onClose,
@@ -82,6 +159,9 @@ function SheetContent({
   const { photos } = usePlacePhoto(place.id);
   const { data: metaMap } = useBarMeta([place.id]);
   const likeCount = metaMap?.[place.id]?.like_count ?? 0;
+  const { data: districtMap } = usePlaceDistricts([place.id]);
+  const districtInfo = districtMap?.[place.id];
+
   return (
     <div className="flex flex-col">
       {/* Handle bar for mobile */}
@@ -115,9 +195,17 @@ function SheetContent({
           )}
           <div className="min-w-0 flex-1">
             <h2 className="text-xl font-bold text-card-foreground truncate">{place.place_name}</h2>
-            <span className={`mt-1.5 inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ${colorClass}`}>
-              {shortCategory}
-            </span>
+            <div className="mt-1.5 flex items-center gap-1.5 flex-wrap">
+              {districtInfo && (
+                <span className="inline-flex items-center gap-0.5 rounded-full bg-primary/15 px-2.5 py-0.5 text-xs font-medium text-primary">
+                  <MapPin className="h-3 w-3" />
+                  {districtInfo.districtName}
+                </span>
+              )}
+              <span className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ${colorClass}`}>
+                {shortCategory}
+              </span>
+            </div>
           </div>
         </div>
         <div className="flex items-center gap-2">
@@ -127,6 +215,11 @@ function SheetContent({
           </button>
         </div>
       </div>
+
+      {/* District assignment if not cached */}
+      {districtMap && !districtInfo && (
+        <DistrictAssigner place={place} />
+      )}
 
       {/* Map preview */}
       <div className="mx-5 overflow-hidden rounded-xl border border-border">

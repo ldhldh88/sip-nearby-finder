@@ -1,10 +1,11 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Search, X, Loader2 } from "lucide-react";
+import { Search, X, Loader2, MapPin } from "lucide-react";
 import { useBarSearch } from "@/hooks/useBarSearch";
 import { KakaoPlace } from "@/lib/kakao";
 import { getShortCategory, getCategoryColor } from "@/hooks/useKakaoSearch";
 import PlaceThumbnail from "@/components/PlaceThumbnail";
+import { usePlaceDistricts } from "@/hooks/usePlaceDistricts";
 
 interface SearchBarProps {
   onSelectPlace: (place: KakaoPlace) => void;
@@ -15,6 +16,12 @@ const SearchBar = ({ onSelectPlace }: SearchBarProps) => {
   const [query, setQuery] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
   const { data: results, isLoading } = useBarSearch(query);
+
+  const placeIds = useMemo(
+    () => (results || []).map((p) => p.id),
+    [results]
+  );
+  const { data: districtMap } = usePlaceDistricts(placeIds);
 
   useEffect(() => {
     if (open) {
@@ -32,7 +39,6 @@ const SearchBar = ({ onSelectPlace }: SearchBarProps) => {
 
   return (
     <>
-      {/* Search trigger button */}
       <button
         onClick={() => setOpen(true)}
         className="rounded-full p-2 transition-colors hover:bg-muted"
@@ -41,7 +47,6 @@ const SearchBar = ({ onSelectPlace }: SearchBarProps) => {
         <Search className="h-5 w-5 text-foreground" />
       </button>
 
-      {/* Search overlay */}
       <AnimatePresence>
         {open && (
           <>
@@ -60,7 +65,6 @@ const SearchBar = ({ onSelectPlace }: SearchBarProps) => {
               transition={{ duration: 0.2 }}
             >
               <div className="overflow-hidden rounded-2xl bg-card shadow-xl" style={{ boxShadow: "var(--shadow-card-hover)" }}>
-                {/* Input */}
                 <div className="flex items-center gap-3 border-b border-border px-4 py-3">
                   <Search className="h-5 w-5 flex-shrink-0 text-muted-foreground" />
                   <input
@@ -76,7 +80,6 @@ const SearchBar = ({ onSelectPlace }: SearchBarProps) => {
                   </button>
                 </div>
 
-                {/* Results */}
                 <div className="max-h-[60vh] overflow-y-auto">
                   {isLoading && query.trim().length >= 2 && (
                     <div className="flex items-center justify-center py-8">
@@ -95,6 +98,7 @@ const SearchBar = ({ onSelectPlace }: SearchBarProps) => {
                       {results.map((place) => {
                         const short = getShortCategory(place.category_name);
                         const color = getCategoryColor(short);
+                        const districtInfo = districtMap?.[place.id];
 
                         return (
                           <li key={place.id}>
@@ -115,9 +119,22 @@ const SearchBar = ({ onSelectPlace }: SearchBarProps) => {
                                 <p className="mt-0.5 text-xs text-muted-foreground truncate">
                                   {place.road_address_name || place.address_name}
                                 </p>
-                                <span className={`mt-1 inline-flex rounded-full px-2 py-0.5 text-[11px] font-medium ${color}`}>
-                                  {short}
-                                </span>
+                                <div className="mt-1 flex items-center gap-1.5 flex-wrap">
+                                  {districtInfo ? (
+                                    <span className="inline-flex items-center gap-0.5 rounded-full bg-primary/15 px-2 py-0.5 text-[11px] font-medium text-primary">
+                                      <MapPin className="h-2.5 w-2.5" />
+                                      {districtInfo.districtName}
+                                    </span>
+                                  ) : (
+                                    <span className="inline-flex items-center gap-0.5 rounded-full bg-muted px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
+                                      <MapPin className="h-2.5 w-2.5" />
+                                      미등록
+                                    </span>
+                                  )}
+                                  <span className={`inline-flex rounded-full px-2 py-0.5 text-[11px] font-medium ${color}`}>
+                                    {short}
+                                  </span>
+                                </div>
                               </div>
                             </button>
                           </li>
