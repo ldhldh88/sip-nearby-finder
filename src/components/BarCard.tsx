@@ -12,7 +12,7 @@ interface BarCardProps {
   themes?: Theme[];
 }
 
-const BarCard = ({ place, index, onClick }: BarCardProps) => {
+const BarCard = ({ place, index, onClick, themes }: BarCardProps) => {
   const shortCategory = getShortCategory(place.category_name);
   const colorClass = getCategoryColor(shortCategory);
 
