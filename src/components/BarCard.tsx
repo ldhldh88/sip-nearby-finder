@@ -14,7 +14,7 @@ interface BarCardProps {
   likeCount?: number;
 }
 
-const BarCard = ({ place, index, onClick, themes }: BarCardProps) => {
+const BarCard = ({ place, index, onClick, themes, likeCount = 0 }: BarCardProps) => {
   const shortCategory = getShortCategory(place.category_name);
   const colorClass = getCategoryColor(shortCategory);
 
