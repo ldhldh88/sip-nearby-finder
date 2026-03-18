@@ -109,8 +109,9 @@ serve(async (req) => {
     let totalPlaces = 0;
 
     for (const district of districtsToSync || []) {
-      const location = district.name;
-      console.log(`Syncing district: ${location}`);
+      // Use first part of slash-separated name for search (e.g. "강남/역삼/삼성/논현" -> "강남")
+      const location = district.name.split('/')[0].trim();
+      console.log(`Syncing district: ${district.name} (search: ${location})`);
 
       // Fetch from Kakao using multi-keyword strategy
       const allResults = await Promise.all(
