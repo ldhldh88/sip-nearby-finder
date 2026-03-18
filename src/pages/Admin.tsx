@@ -8,6 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useBarSearch } from "@/hooks/useBarSearch";
 import { KakaoPlace } from "@/lib/kakao";
 import { Lock, Search, MapPin, Tag, Plus, Pencil, Trash2, Store } from "lucide-react";
+import AdminRegions from "@/components/AdminRegions";
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const anonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
