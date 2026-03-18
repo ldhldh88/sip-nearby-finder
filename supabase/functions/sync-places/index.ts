@@ -64,11 +64,9 @@ serve(async (req) => {
       if (body.district_id) {
         districtIds = [body.district_id];
       }
-      if (body.batch_limit) {
-        batchLimit = body.batch_limit;
-      }
-      if (body.sync_all) {
-        syncAll = true;
+      if (body.batch_limit) batchLimit = body.batch_limit;
+      if (body.batch_offset) batchOffset = body.batch_offset;
+      if (body.sync_all) syncAll = true;
       }
     } catch {
       // No body or parse error = scheduled call, find due districts
