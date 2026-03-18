@@ -11,6 +11,7 @@ async function searchBarsByName(keyword: string): Promise<KakaoPlace[]> {
     page: "1",
     size: "15",
     sort: "accuracy",
+    mode: "simple",
   });
 
   const res = await fetch(`${supabaseUrl}/functions/v1/kakao-proxy?${params}`, {
