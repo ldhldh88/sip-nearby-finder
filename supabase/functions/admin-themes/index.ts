@@ -245,6 +245,23 @@ serve(async (req) => {
       });
     }
 
+    if (action === 'trigger_sync') {
+      // Manually trigger sync for a specific district
+      const syncUrl = `${Deno.env.get('SUPABASE_URL')}/functions/v1/sync-places`;
+      const syncRes = await fetch(syncUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')}`,
+        },
+        body: JSON.stringify({ district_id }),
+      });
+      const syncData = await syncRes.json();
+      return new Response(JSON.stringify(syncData), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
     return new Response(JSON.stringify({ error: 'Invalid action' }), {
       status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
