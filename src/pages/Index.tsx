@@ -56,6 +56,24 @@ const Index = () => {
   const pageableCount = data?.pageableCount ?? 0;
   const totalPages = data?.totalPages ?? 1;
 
+  // Fetch themes data
+  const { data: allThemes } = useThemes();
+  const placeIds = useMemo(() => places.map((p) => p.id), [places]);
+  const { data: barThemesMap } = useBarThemes(placeIds);
+
+  // Build theme lookup: themeId -> Theme
+  const themeLookup = useMemo(() => {
+    const map: Record<string, { id: string; name: string; icon_url: string | null }> = {};
+    for (const t of allThemes || []) map[t.id] = t;
+    return map;
+  }, [allThemes]);
+
+  // Filter places by selected theme
+  const filteredPlaces = useMemo(() => {
+    if (!selectedThemeId || !barThemesMap) return places;
+    return places.filter((p) => barThemesMap[p.id]?.includes(selectedThemeId));
+  }, [places, selectedThemeId, barThemesMap]);
+
   // Generate page numbers to show
   const getPageNumbers = () => {
     const pages: number[] = [];
