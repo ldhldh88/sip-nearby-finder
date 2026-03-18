@@ -122,27 +122,68 @@ export type Database = {
           },
         ]
       }
+      cached_places: {
+        Row: {
+          created_at: string
+          district_id: string
+          id: string
+          kakao_place_id: string
+          place_data: Json
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          district_id: string
+          id?: string
+          kakao_place_id: string
+          place_data: Json
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          district_id?: string
+          id?: string
+          kakao_place_id?: string
+          place_data?: Json
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cached_places_district_id_fkey"
+            columns: ["district_id"]
+            isOneToOne: false
+            referencedRelation: "districts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       districts: {
         Row: {
           created_at: string
           id: string
+          last_synced_at: string | null
           name: string
           province_id: string
           sort_order: number
+          sync_interval_days: number | null
         }
         Insert: {
           created_at?: string
           id?: string
+          last_synced_at?: string | null
           name: string
           province_id: string
           sort_order?: number
+          sync_interval_days?: number | null
         }
         Update: {
           created_at?: string
           id?: string
+          last_synced_at?: string | null
           name?: string
           province_id?: string
           sort_order?: number
+          sync_interval_days?: number | null
         }
         Relationships: [
           {
