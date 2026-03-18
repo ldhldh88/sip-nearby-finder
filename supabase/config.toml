@@ -5,3 +5,9 @@ verify_jwt = false
 
 [functions.kakao-place-photo]
 verify_jwt = false
+
+[functions.admin-auth]
+verify_jwt = false
+
+[functions.admin-themes]
+verify_jwt = false
