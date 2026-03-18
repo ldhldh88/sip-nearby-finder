@@ -170,10 +170,9 @@ serve(async (req) => {
     }
 
     if (action === 'create_province') {
-      const { province_name, sort_order } = await req.json().catch(() => ({}));
       const { data, error } = await supabase
         .from('provinces')
-        .insert({ name: province_name || theme_name, sort_order: sort_order ?? 999 })
+        .insert({ name: province_name, sort_order: sort_order ?? 999 })
         .select()
         .single();
       if (error) throw error;
@@ -183,14 +182,13 @@ serve(async (req) => {
     }
 
     if (action === 'update_province') {
-      const { province_id, province_name: pName, sort_order: pSort } = await req.json().catch(() => ({}));
       const updates: Record<string, any> = {};
-      if (pName !== undefined) updates.name = pName;
-      if (pSort !== undefined) updates.sort_order = pSort;
+      if (province_name !== undefined) updates.name = province_name;
+      if (sort_order !== undefined) updates.sort_order = sort_order;
       const { error } = await supabase
         .from('provinces')
         .update(updates)
-        .eq('id', province_id || theme_id);
+        .eq('id', province_id);
       if (error) throw error;
       return new Response(JSON.stringify({ ok: true }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -198,11 +196,10 @@ serve(async (req) => {
     }
 
     if (action === 'delete_province') {
-      const { province_id } = await req.json().catch(() => ({}));
       const { error } = await supabase
         .from('provinces')
         .delete()
-        .eq('id', province_id || theme_id);
+        .eq('id', province_id);
       if (error) throw error;
       return new Response(JSON.stringify({ ok: true }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -210,7 +207,6 @@ serve(async (req) => {
     }
 
     if (action === 'create_district') {
-      const { province_id, district_name, sort_order } = await req.json().catch(() => ({}));
       const { data, error } = await supabase
         .from('districts')
         .insert({ province_id, name: district_name, sort_order: sort_order ?? 999 })
@@ -223,11 +219,10 @@ serve(async (req) => {
     }
 
     if (action === 'update_district') {
-      const { district_id, district_name, sort_order, province_id: newProvinceId } = await req.json().catch(() => ({}));
       const updates: Record<string, any> = {};
       if (district_name !== undefined) updates.name = district_name;
       if (sort_order !== undefined) updates.sort_order = sort_order;
-      if (newProvinceId !== undefined) updates.province_id = newProvinceId;
+      if (province_id !== undefined) updates.province_id = province_id;
       const { error } = await supabase
         .from('districts')
         .update(updates)
@@ -239,7 +234,6 @@ serve(async (req) => {
     }
 
     if (action === 'delete_district') {
-      const { district_id } = await req.json().catch(() => ({}));
       const { error } = await supabase
         .from('districts')
         .delete()
