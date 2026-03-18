@@ -14,7 +14,135 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      bar_meta: {
+        Row: {
+          bookmark_count: number
+          created_at: string
+          hot_score: number
+          kakao_place_id: string
+          like_count: number
+          updated_at: string
+          view_count: number
+        }
+        Insert: {
+          bookmark_count?: number
+          created_at?: string
+          hot_score?: number
+          kakao_place_id: string
+          like_count?: number
+          updated_at?: string
+          view_count?: number
+        }
+        Update: {
+          bookmark_count?: number
+          created_at?: string
+          hot_score?: number
+          kakao_place_id?: string
+          like_count?: number
+          updated_at?: string
+          view_count?: number
+        }
+        Relationships: []
+      }
+      bar_themes: {
+        Row: {
+          created_at: string
+          id: string
+          kakao_place_id: string
+          theme_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          kakao_place_id: string
+          theme_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          kakao_place_id?: string
+          theme_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bar_themes_kakao_place_id_fkey"
+            columns: ["kakao_place_id"]
+            isOneToOne: false
+            referencedRelation: "bar_meta"
+            referencedColumns: ["kakao_place_id"]
+          },
+          {
+            foreignKeyName: "bar_themes_theme_id_fkey"
+            columns: ["theme_id"]
+            isOneToOne: false
+            referencedRelation: "themes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      bookmarks: {
+        Row: {
+          created_at: string
+          id: string
+          kakao_place_id: string
+          theme_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          kakao_place_id: string
+          theme_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          kakao_place_id?: string
+          theme_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bookmarks_kakao_place_id_fkey"
+            columns: ["kakao_place_id"]
+            isOneToOne: false
+            referencedRelation: "bar_meta"
+            referencedColumns: ["kakao_place_id"]
+          },
+          {
+            foreignKeyName: "bookmarks_theme_id_fkey"
+            columns: ["theme_id"]
+            isOneToOne: false
+            referencedRelation: "themes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      themes: {
+        Row: {
+          created_at: string
+          icon_url: string | null
+          id: string
+          name: string
+        }
+        Insert: {
+          created_at?: string
+          icon_url?: string | null
+          id?: string
+          name: string
+        }
+        Update: {
+          created_at?: string
+          icon_url?: string | null
+          id?: string
+          name?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
