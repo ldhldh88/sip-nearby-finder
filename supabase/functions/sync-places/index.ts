@@ -109,14 +109,18 @@ serve(async (req) => {
     let totalPlaces = 0;
 
     for (const district of districtsToSync || []) {
-      // Use first part of slash-separated name for search (e.g. "강남/역삼/삼성/논현" -> "강남")
-      const location = district.name.split('/')[0].trim();
-      console.log(`Syncing district: ${district.name} (search: ${location})`);
+      // Split slash-separated name and search each sub-location separately
+      const subLocations = district.name.split('/').map((s: string) => s.trim()).filter(Boolean);
+      console.log(`Syncing district: ${district.name} (sub-locations: ${subLocations.join(', ')})`);
 
-      // Fetch from Kakao using multi-keyword strategy
-      const allResults = await Promise.all(
-        BAR_KEYWORDS.map((kw) => fetchAllPagesForKeyword(KAKAO_REST_API_KEY, location, kw)),
-      );
+      // Fetch from Kakao using multi-keyword strategy for EACH sub-location
+      const allResults: any[][] = [];
+      for (const loc of subLocations) {
+        const locResults = await Promise.all(
+          BAR_KEYWORDS.map((kw) => fetchAllPagesForKeyword(KAKAO_REST_API_KEY, loc, kw)),
+        );
+        allResults.push(...locResults);
+      }
 
       // Deduplicate by place id
       const seen = new Set<string>();
@@ -130,7 +134,7 @@ serve(async (req) => {
         }
       }
 
-      console.log(`  Found ${unique.length} unique places for ${location}`);
+      console.log(`  Found ${unique.length} unique places for ${district.name}`);
 
       // Replace cached data: delete old, insert new
       await supabase
@@ -166,7 +170,7 @@ serve(async (req) => {
 
       totalSynced++;
       totalPlaces += unique.length;
-      console.log(`  Completed sync for ${location}: ${unique.length} places cached`);
+      console.log(`  Completed sync for ${district.name}: ${unique.length} places cached`);
     }
 
     return new Response(JSON.stringify({

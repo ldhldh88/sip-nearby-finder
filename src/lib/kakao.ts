@@ -24,7 +24,7 @@ interface SearchResult {
 }
 
 function getSearchQuery(district: string): string {
-  return district.split("/")[0];
+  return district;
 }
 
 /**

@@ -133,9 +133,15 @@ serve(async (req) => {
     }
 
     // No cache available — fetch live from Kakao
-    const allResults = await Promise.all(
-      BAR_KEYWORDS.map((kw) => fetchAllPagesForKeyword(KAKAO_REST_API_KEY, location, kw)),
-    );
+    // Split slash-separated location and search each sub-location
+    const subLocations = location.split('/').map((s: string) => s.trim()).filter(Boolean);
+    const allResults: any[][] = [];
+    for (const loc of subLocations) {
+      const locResults = await Promise.all(
+        BAR_KEYWORDS.map((kw) => fetchAllPagesForKeyword(KAKAO_REST_API_KEY, loc, kw)),
+      );
+      allResults.push(...locResults);
+    }
 
     // Deduplicate by place id
     const seen = new Set<string>();
