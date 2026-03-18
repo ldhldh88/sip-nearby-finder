@@ -9,8 +9,13 @@ const corsHeaders = {
 const BAR_KEYWORDS = ['술집', '호프', '와인바', '칵테일바', '포차', '이자카야', '요리주점'];
 const KAKAO_PAGE_LIMIT = 3;
 const KAKAO_PAGE_SIZE = 15;
+// Category search: FD6 = 음식점 (includes bars)
+const CATEGORY_CODE = 'FD6';
+const CATEGORY_RADIUS = 2000; // 2km radius
+const CATEGORY_PAGE_LIMIT = 5;
 
-async function fetchAllPagesForKeyword(
+/** Keyword search: location + keyword */
+async function fetchKeywordPages(
   apiKey: string,
   location: string,
   keyword: string,
@@ -35,6 +40,70 @@ async function fetchAllPagesForKeyword(
   return results;
 }
 
+/** Get center coordinates for a location by simple keyword search */
+async function getCenterCoords(
+  apiKey: string,
+  location: string,
+): Promise<{ x: string; y: string } | null> {
+  const params = new URLSearchParams({
+    query: `${location} 술집`,
+    page: '1',
+    size: '1',
+    sort: 'accuracy',
+  });
+  const res = await fetch(
+    `https://dapi.kakao.com/v2/local/search/keyword.json?${params}`,
+    { headers: { Authorization: `KakaoAK ${apiKey}` } },
+  );
+  if (!res.ok) return null;
+  const data = await res.json();
+  if (data.documents.length === 0) return null;
+  return { x: data.documents[0].x, y: data.documents[0].y };
+}
+
+/** Category search: coordinate + radius based */
+async function fetchCategoryPages(
+  apiKey: string,
+  x: string,
+  y: string,
+  radius: number,
+): Promise<any[]> {
+  const results: any[] = [];
+  for (let page = 1; page <= CATEGORY_PAGE_LIMIT; page++) {
+    const params = new URLSearchParams({
+      category_group_code: CATEGORY_CODE,
+      x,
+      y,
+      radius: String(radius),
+      page: String(page),
+      size: String(KAKAO_PAGE_SIZE),
+      sort: 'distance',
+    });
+    const res = await fetch(
+      `https://dapi.kakao.com/v2/local/search/category.json?${params}`,
+      { headers: { Authorization: `KakaoAK ${apiKey}` } },
+    );
+    if (!res.ok) break;
+    const data = await res.json();
+    // Filter only bar-related categories
+    const barDocs = data.documents.filter((doc: any) =>
+      doc.category_name?.includes('술집') ||
+      doc.category_name?.includes('호프') ||
+      doc.category_name?.includes('와인바') ||
+      doc.category_name?.includes('칵테일') ||
+      doc.category_name?.includes('포차') ||
+      doc.category_name?.includes('이자카야') ||
+      doc.category_name?.includes('요리주점') ||
+      doc.category_name?.includes('바(BAR)') ||
+      doc.category_name?.includes('맥주') ||
+      doc.category_name?.includes('펍')
+    );
+    results.push(...barDocs);
+    if (data.meta.is_end) break;
+  }
+  return results;
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -53,7 +122,7 @@ serve(async (req) => {
       });
     }
 
-    // Check if this is a manual call (specific district_id) or scheduled (check all due)
+    // Parse request body
     let districtIds: string[] = [];
     let batchLimit = 5;
     let batchOffset = 0;
@@ -61,19 +130,16 @@ serve(async (req) => {
 
     try {
       const body = await req.json();
-      if (body.district_id) {
-        districtIds = [body.district_id];
-      }
+      if (body.district_id) districtIds = [body.district_id];
       if (body.batch_limit) batchLimit = body.batch_limit;
       if (body.batch_offset) batchOffset = body.batch_offset;
       if (body.sync_all) syncAll = true;
     } catch {
-      // No body or parse error = scheduled call, find due districts
+      // No body = scheduled call
     }
 
     if (districtIds.length === 0) {
       if (syncAll) {
-        // Sync ALL districts regardless of interval
         const { data: allDistricts, error: aErr } = await supabase
           .from('districts')
           .select('id, name, province_id')
@@ -83,13 +149,11 @@ serve(async (req) => {
         districtIds = (allDistricts || []).map((d: any) => d.id);
         console.log(`Sync all: processing ${districtIds.length} districts (offset: ${batchOffset}, limit: ${batchLimit})`);
       } else {
-        // Find districts due for sync based on sync_interval_days
         const { data: dueDistricts, error: dErr } = await supabase
           .from('districts')
           .select('id, name, sync_interval_days, last_synced_at, province_id')
           .not('sync_interval_days', 'is', null)
           .gt('sync_interval_days', 0);
-
         if (dErr) throw dErr;
 
         const now = new Date();
@@ -101,7 +165,7 @@ serve(async (req) => {
         });
 
         districtIds = due.slice(0, batchLimit).map((d: any) => d.id);
-        console.log(`Scheduled sync: processing ${districtIds.length} of ${due.length} due districts (batch limit: ${batchLimit})`);
+        console.log(`Scheduled sync: processing ${districtIds.length} of ${due.length} due districts`);
       }
     }
 
@@ -111,7 +175,6 @@ serve(async (req) => {
       });
     }
 
-    // Fetch district details
     const { data: districtsToSync, error: fetchErr } = await supabase
       .from('districts')
       .select('id, name, province_id')
@@ -122,23 +185,37 @@ serve(async (req) => {
     let totalPlaces = 0;
 
     for (const district of districtsToSync || []) {
-      // Split slash-separated name and search each sub-location separately
       const subLocations = district.name.split('/').map((s: string) => s.trim()).filter(Boolean);
       console.log(`Syncing district: ${district.name} (sub-locations: ${subLocations.join(', ')})`);
 
-      // Fetch from Kakao using multi-keyword strategy for EACH sub-location
-      const allResults: any[][] = [];
+      // 1) Keyword search for each sub-location
+      const allKeywordResults: any[][] = [];
       for (const loc of subLocations) {
         const locResults = await Promise.all(
-          BAR_KEYWORDS.map((kw) => fetchAllPagesForKeyword(KAKAO_REST_API_KEY, loc, kw)),
+          BAR_KEYWORDS.map((kw) => fetchKeywordPages(KAKAO_REST_API_KEY, loc, kw)),
         );
-        allResults.push(...locResults);
+        allKeywordResults.push(...locResults);
       }
 
-      // Deduplicate by place id
+      // 2) Category (coordinate-based) search for each sub-location
+      const allCategoryResults: any[] = [];
+      for (const loc of subLocations) {
+        const center = await getCenterCoords(KAKAO_REST_API_KEY, loc);
+        if (center) {
+          console.log(`  Category search for ${loc} at (${center.x}, ${center.y}) radius ${CATEGORY_RADIUS}m`);
+          const catResults = await fetchCategoryPages(
+            KAKAO_REST_API_KEY, center.x, center.y, CATEGORY_RADIUS,
+          );
+          allCategoryResults.push(...catResults);
+          console.log(`  Category search found ${catResults.length} bar-type places for ${loc}`);
+        }
+      }
+
+      // 3) Deduplicate all results
       const seen = new Set<string>();
       const unique: any[] = [];
-      for (const docs of allResults) {
+      // Add keyword results first
+      for (const docs of allKeywordResults) {
         for (const doc of docs) {
           if (!seen.has(doc.id)) {
             seen.add(doc.id);
@@ -146,10 +223,17 @@ serve(async (req) => {
           }
         }
       }
+      // Then add category results
+      for (const doc of allCategoryResults) {
+        if (!seen.has(doc.id)) {
+          seen.add(doc.id);
+          unique.push(doc);
+        }
+      }
 
-      console.log(`  Found ${unique.length} unique places for ${district.name}`);
+      console.log(`  Found ${unique.length} unique places for ${district.name} (keyword: ${unique.length - allCategoryResults.filter(d => !seen.has(d.id)).length}, category added new ones)`);
 
-      // Replace cached data: delete old, insert new
+      // Replace cached data
       await supabase
         .from('cached_places')
         .delete()
@@ -170,12 +254,11 @@ serve(async (req) => {
             .upsert(batch, { onConflict: 'district_id,kakao_place_id' });
 
           if (upsertErr) {
-            console.error(`  Batch upsert error for ${location}:`, upsertErr.message);
+            console.error(`  Batch upsert error:`, upsertErr.message);
           }
         }
       }
 
-      // Update last_synced_at
       await supabase
         .from('districts')
         .update({ last_synced_at: new Date().toISOString() })
