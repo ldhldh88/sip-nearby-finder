@@ -113,8 +113,25 @@ const Index = () => {
       <header className="sticky top-0 z-10 h-14 border-b border-border backdrop-blur-md bg-background/80">
         <div className="mx-auto flex h-full max-w-3xl items-center justify-between px-4">
           <div className="flex items-center gap-2">
-            <Wine className="h-5 w-5 text-primary" />
-            <span className="text-lg font-bold tracking-tight text-foreground">FirePlace</span>
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" className="h-7 w-7" aria-hidden="true">
+              {/* Glass */}
+              <path d="M18 28c0-2 2-4 4-4h20c2 0 4 2 4 4l-3 22c-.5 3-3 5-6 5H27c-3 0-5.5-2-6-5L18 28z" fill="hsl(var(--primary))" opacity="0.85"/>
+              <path d="M20 28h24l-2.5 20c-.4 2.4-2.4 4-4.8 4H27.3c-2.4 0-4.4-1.6-4.8-4L20 28z" fill="hsl(var(--primary))" opacity="0.5"/>
+              {/* Liquid */}
+              <path d="M21.5 34h21l-2 14c-.3 2-2 3.5-4 3.5h-9c-2 0-3.7-1.5-4-3.5l-2-14z" fill="hsl(var(--primary))" opacity="0.7"/>
+              {/* Flame center */}
+              <path d="M32 6c0 0-8 6-8 14 0 5 3.5 8 8 8s8-3 8-8c0-8-8-14-8-14z" fill="#FF6B35"/>
+              <path d="M32 12c0 0-4 3.5-4 8 0 3 1.8 4.5 4 4.5s4-1.5 4-4.5c0-4.5-4-8-4-8z" fill="#FFD93D"/>
+              <path d="M32 17c0 0-2 2-2 4.5c0 1.5.9 2.5 2 2.5s2-1 2-2.5c0-2.5-2-4.5-2-4.5z" fill="#FFF3B0"/>
+              {/* Cute face on glass */}
+              <circle cx="28" cy="40" r="1.5" fill="hsl(var(--primary-foreground))"/>
+              <circle cx="36" cy="40" r="1.5" fill="hsl(var(--primary-foreground))"/>
+              <path d="M29.5 44c1.2 1.2 3.8 1.2 5 0" stroke="hsl(var(--primary-foreground))" strokeWidth="1.2" strokeLinecap="round" fill="none"/>
+              {/* Cheek blush */}
+              <circle cx="25.5" cy="42" r="2" fill="#FF9999" opacity="0.5"/>
+              <circle cx="38.5" cy="42" r="2" fill="#FF9999" opacity="0.5"/>
+            </svg>
+            <span className="text-lg font-bold tracking-tight text-foreground">파이어플레이스</span>
           </div>
 
           <div className="flex items-center gap-2">
