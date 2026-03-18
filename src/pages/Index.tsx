@@ -1,7 +1,7 @@
 import { useState, useMemo, useRef, useCallback, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronDown, Wine, Loader2 } from "lucide-react";
+import { ChevronDown, Loader2 } from "lucide-react";
 import RegionSelector from "@/components/RegionSelector";
 import BarCard from "@/components/BarCard";
 import SearchBar from "@/components/SearchBar";
