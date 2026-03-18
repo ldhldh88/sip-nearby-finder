@@ -66,6 +66,45 @@ serve(async (req) => {
         );
       if (error) throw error;
 
+      // Also cache the place data if provided, so theme-filtered bars show up
+      if (place_data) {
+        // Find matching district by address
+        const address = place_data.address_name || '';
+        let matchedDistrictId: string | null = null;
+
+        // Try to match district from address (e.g. "서울 서초구..." -> match district with "서초")
+        const { data: allDistricts } = await supabase
+          .from('districts')
+          .select('id, name');
+
+        if (allDistricts) {
+          for (const d of allDistricts) {
+            const parts = d.name.split('/');
+            for (const part of parts) {
+              if (address.includes(part.trim())) {
+                matchedDistrictId = d.id;
+                break;
+              }
+            }
+            if (matchedDistrictId) break;
+          }
+        }
+
+        if (matchedDistrictId) {
+          await supabase
+            .from('cached_places')
+            .upsert(
+              {
+                district_id: matchedDistrictId,
+                kakao_place_id,
+                place_data,
+                updated_at: new Date().toISOString(),
+              },
+              { onConflict: 'district_id,kakao_place_id' }
+            );
+        }
+      }
+
       return new Response(JSON.stringify({ ok: true }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
