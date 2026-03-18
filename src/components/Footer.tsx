@@ -22,7 +22,7 @@ const Footer = () => {
 
         {/* Copyright */}
         <p className="mt-3 text-[11px] text-muted-foreground/50">
-          © 2026 오늘 술집 어디 🍺
+          © 2026 FirePlace 🔥
         </p>
       </div>
     </footer>
