@@ -1,7 +1,7 @@
 import { useState, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, Search } from "lucide-react";
-import { REGIONS } from "@/data/regions";
+import { useRegions } from "@/hooks/useRegions";
 import { useIsMobile } from "@/hooks/use-mobile";
 
 interface RegionSelectorProps {
