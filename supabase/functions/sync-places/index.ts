@@ -170,7 +170,7 @@ serve(async (req) => {
 
       totalSynced++;
       totalPlaces += unique.length;
-      console.log(`  Completed sync for ${location}: ${unique.length} places cached`);
+      console.log(`  Completed sync for ${district.name}: ${unique.length} places cached`);
     }
 
     return new Response(JSON.stringify({
