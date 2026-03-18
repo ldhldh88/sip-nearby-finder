@@ -18,6 +18,7 @@ const Index = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const [regionOpen, setRegionOpen] = useState(false);
   const [detailPlace, setDetailPlace] = useState<KakaoPlace | null>(null);
+  const [selectedThemeId, setSelectedThemeId] = useState<string | null>(null);
 
   // Read state from URL
   const selectedProvince = searchParams.get("province") || "서울";
