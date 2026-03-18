@@ -55,11 +55,15 @@ serve(async (req) => {
 
     // Check if this is a manual call (specific district_id) or scheduled (check all due)
     let districtIds: string[] = [];
+    let batchLimit = 5; // Process max 5 districts per invocation
 
     try {
       const body = await req.json();
       if (body.district_id) {
         districtIds = [body.district_id];
+      }
+      if (body.batch_limit) {
+        batchLimit = body.batch_limit;
       }
     } catch {
       // No body or parse error = scheduled call, find due districts
@@ -83,8 +87,9 @@ serve(async (req) => {
         return diffDays >= d.sync_interval_days;
       });
 
-      districtIds = due.map((d: any) => d.id);
-      console.log(`Scheduled sync: ${due.length} districts due out of ${dueDistricts?.length || 0} configured`);
+      // Only take batchLimit districts
+      districtIds = due.slice(0, batchLimit).map((d: any) => d.id);
+      console.log(`Scheduled sync: processing ${districtIds.length} of ${due.length} due districts (batch limit: ${batchLimit})`);
     }
 
     if (districtIds.length === 0) {
