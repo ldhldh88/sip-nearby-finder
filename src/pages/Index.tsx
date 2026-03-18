@@ -74,6 +74,7 @@ const Index = () => {
   const { data: allThemes } = useThemes();
   const placeIds = useMemo(() => allPlaces.map((p) => p.id), [allPlaces]);
   const { data: barThemesMap } = useBarThemes(placeIds);
+  const { data: likeCounts } = useBarLikeCounts(placeIds);
 
   // DB-level theme filtering: fetch bars with the selected theme in this district
   const { data: themeFilterData, isLoading: isThemeLoading } = useThemeFilteredBars(
