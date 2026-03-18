@@ -42,6 +42,38 @@ const Index = () => {
     setSearchParams(params);
   };
 
+  const handleSync = useCallback(async () => {
+    if (isSyncing) return;
+    setIsSyncing(true);
+    try {
+      // Find district ID
+      const location = selectedDistrict.split("/")[0]?.trim();
+      const { data: districts } = await supabase
+        .from("districts")
+        .select("id")
+        .ilike("name", `%${location}%`)
+        .limit(1);
+      const districtId = districts?.[0]?.id;
+      if (!districtId) {
+        toast.error("지역을 찾을 수 없어요");
+        return;
+      }
+
+      const { error } = await supabase.functions.invoke("sync-places", {
+        body: { district_id: districtId },
+      });
+      if (error) throw error;
+
+      toast.success("동기화 완료! 리스트를 새로고침합니다");
+      queryClient.invalidateQueries({ queryKey: ["district-bars"] });
+    } catch (e) {
+      toast.error("동기화에 실패했어요");
+      console.error(e);
+    } finally {
+      setIsSyncing(false);
+    }
+  }, [selectedDistrict, isSyncing, queryClient]);
+
   const regionLabel = selectedDistrict
     ? selectedDistrict
     : selectedProvince
