@@ -178,6 +178,7 @@ export default function Admin() {
           <TabsList className="mb-4">
             <TabsTrigger value="link">테마 연결</TabsTrigger>
             <TabsTrigger value="manage">테마 관리</TabsTrigger>
+            <TabsTrigger value="regions">지역 관리</TabsTrigger>
           </TabsList>
 
           {/* === Tab: 테마 연결 === */}
