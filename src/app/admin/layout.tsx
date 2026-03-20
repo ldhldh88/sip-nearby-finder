@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "관리 | 파이어플레이스",
+  title: "관리 | FirePlace",
   robots: { index: false, follow: false },
 };
 

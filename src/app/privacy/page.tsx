@@ -6,8 +6,8 @@ const contact =
   process.env.NEXT_PUBLIC_CONTACT_EMAIL?.trim() || null;
 
 export const metadata: Metadata = {
-  title: "개인정보처리방침 | 파이어플레이스",
-  description: "파이어플레이스(FirePlace) 개인정보 수집·이용 및 제3자(광고 포함) 안내",
+  title: "개인정보처리방침 | FirePlace",
+  description: "FirePlace 개인정보 수집·이용 및 제3자(광고 포함) 안내",
   robots: { index: true, follow: true },
 };
 
@@ -15,7 +15,7 @@ export default function PrivacyPage() {
   return (
     <LegalPageShell title="개인정보처리방침">
       <p>
-        파이어플레이스(이하 &quot;서비스&quot;)는 이용자의 개인정보를 중요하게 여기며, 관련 법령에 따라
+        FirePlace(이하 &quot;서비스&quot;)는 이용자의 개인정보를 중요하게 여기며, 관련 법령에 따라
         개인정보를 안전하게 처리합니다. 본 방침은 서비스 이용 시 적용됩니다.
       </p>
 

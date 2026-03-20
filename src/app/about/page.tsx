@@ -3,8 +3,8 @@ import Link from "next/link";
 import LegalPageShell from "@/components/LegalPageShell";
 
 export const metadata: Metadata = {
-  title: "소개 | 파이어플레이스",
-  description: "파이어플레이스(FirePlace)는 지역별 술집 정보를 한곳에서 찾을 수 있는 서비스입니다.",
+  title: "소개 | FirePlace",
+  description: "FirePlace는 지역별 술집 정보를 한곳에서 찾을 수 있는 서비스입니다.",
   robots: { index: true, follow: true },
 };
 
@@ -12,7 +12,7 @@ export default function AboutPage() {
   return (
     <LegalPageShell title="서비스 소개">
       <p className="text-foreground">
-        <strong>파이어플레이스(FirePlace)</strong>는 지역과 테마를 기준으로 술집 정보를 탐색할 수 있는 웹
+        <strong>FirePlace</strong>는 지역과 테마를 기준으로 술집 정보를 탐색할 수 있는 웹
         서비스입니다. 인기 장소, 테마 필터, 지도 기반 정보를 활용해 가고 싶은 곳을 빠르게 찾아볼 수 있습니다.
       </p>
       <p>

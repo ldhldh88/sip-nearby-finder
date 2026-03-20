@@ -4,8 +4,8 @@ import LegalPageShell from "@/components/LegalPageShell";
 const email = process.env.NEXT_PUBLIC_CONTACT_EMAIL?.trim() || null;
 
 export const metadata: Metadata = {
-  title: "문의 | 파이어플레이스",
-  description: "파이어플레이스(FirePlace) 문의 및 정보 수정 요청",
+  title: "문의 | FirePlace",
+  description: "FirePlace 문의 및 정보 수정 요청",
   robots: { index: true, follow: true },
 };
 

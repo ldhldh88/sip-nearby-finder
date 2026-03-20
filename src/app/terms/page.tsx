@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import LegalPageShell from "@/components/LegalPageShell";
 
 export const metadata: Metadata = {
-  title: "이용약관 | 파이어플레이스",
-  description: "파이어플레이스(FirePlace) 서비스 이용에 관한 약관",
+  title: "이용약관 | FirePlace",
+  description: "FirePlace 서비스 이용에 관한 약관",
   robots: { index: true, follow: true },
 };
 
@@ -11,7 +11,7 @@ export default function TermsPage() {
   return (
     <LegalPageShell title="이용약관">
       <p>
-        본 약관은 파이어플레이스(이하 &quot;서비스&quot;)의 이용과 관련하여 운영자와 이용자 간 권리·의무 및
+        본 약관은 FirePlace(이하 &quot;서비스&quot;)의 이용과 관련하여 운영자와 이용자 간 권리·의무 및
         책임 사항을 규정합니다.
       </p>
 

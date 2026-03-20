@@ -32,7 +32,7 @@ const Footer = () => {
           </Link>
         </nav>
 
-        <p className="mt-3 text-[11px] text-muted-foreground/50">© 2026 FirePlace 🔥</p>
+        <p className="mt-3 text-[11px] text-muted-foreground/50">© 2026 FirePlace</p>
       </div>
     </footer>
   );
