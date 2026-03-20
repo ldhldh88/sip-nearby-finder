@@ -1,6 +1,6 @@
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { ChevronDown, LayoutList, Loader2, Map, RefreshCw } from "lucide-react";
+import { ChevronDown, Loader2, RefreshCw } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import RegionSelector from "@/components/RegionSelector";
 import BarCard from "@/components/BarCard";
@@ -10,12 +10,18 @@ import HotBarSection from "@/components/HotBarSection";
 import ThemeFilter from "@/components/ThemeFilter";
 import KakaoMap from "@/components/KakaoMap";
 import { useDistrictBars } from "@/hooks/useDistrictBars";
+import { usePlacesInBounds } from "@/hooks/usePlacesInBounds";
 import { useThemes, useBarThemes, useThemeFilteredBars } from "@/hooks/useThemes";
 import { KakaoPlace } from "@/lib/kakao";
 import { supabase } from "@/integrations/supabase/client";
 import Footer from "@/components/Footer";
+import ViewModeFab from "@/components/ViewModeFab";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import {
+  filterPlacesByViewport,
+  type MapViewportBounds,
+} from "@/lib/mapViewport";
 
 /** 지역 맵 폴백 중심 (강남 일대) */
 const DEFAULT_DISTRICT_MAP_CENTER = { lat: 37.498095, lng: 127.027612 };
@@ -28,6 +34,9 @@ const Index = () => {
   const [selectedThemeId, setSelectedThemeId] = useState<string | null>(null);
   const [isSyncing, setIsSyncing] = useState(false);
   const [viewMode, setViewMode] = useState<"list" | "map">("list");
+  const [mapViewportBounds, setMapViewportBounds] = useState<MapViewportBounds | null>(null);
+  /** API 호출 디바운스 — idle 이벤트가 잦을 때 요청 수 제한 */
+  const [debouncedMapBounds, setDebouncedMapBounds] = useState<MapViewportBounds | null>(null);
   const queryClient = useQueryClient();
 
   const selectedProvince = searchParams.get("province") || "서울";
@@ -125,44 +134,57 @@ const Index = () => {
     return allPlaces;
   }, [allPlaces, selectedThemeId, themeFilterData]);
 
-  const mapBody = (
-    <div className="flex min-h-0 flex-1 flex-col">
-      {isLoading && (
-        <div className="flex flex-1 flex-col items-center justify-center py-20">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
-          <p className="mt-3 text-sm text-muted-foreground">술집을 찾고 있어요…</p>
-        </div>
-      )}
+  useEffect(() => {
+    setMapViewportBounds(null);
+  }, [selectedDistrict, selectedThemeId]);
 
-      {isError && (
-        <div className="flex flex-1 flex-col items-center justify-center py-20 text-center">
-          <p className="text-lg font-medium text-destructive">데이터를 불러오지 못했어요</p>
-          <p className="mt-1 text-sm text-muted-foreground">잠시 후 다시 시도해 주세요</p>
-        </div>
-      )}
+  useEffect(() => {
+    if (viewMode === "list") setMapViewportBounds(null);
+  }, [viewMode]);
 
-      {!isLoading && !isError && (
-        <div className="relative h-[calc(100dvh-3.5rem)] w-full shrink-0">
-          <KakaoMap
-            center={DEFAULT_DISTRICT_MAP_CENTER}
-            places={filteredPlaces}
-            onSelectPlace={(place) => setDetailPlace(place as KakaoPlace)}
-            markerVariant="pill"
-            showUserMarker={false}
-            fitBoundsToPlaces={filteredPlaces.length > 0}
-            className="h-full w-full min-h-0"
-          />
-          {filteredPlaces.length === 0 && (
-            <div className="pointer-events-none absolute inset-x-0 top-4 flex justify-center px-4">
-              <div className="max-w-sm rounded-xl border border-border bg-background/95 px-4 py-3 text-center text-sm text-muted-foreground shadow-md backdrop-blur-sm">
-                이 지역에 표시할 술집이 없어요
-              </div>
-            </div>
-          )}
-        </div>
-      )}
-    </div>
-  );
+  useEffect(() => {
+    if (!mapViewportBounds) {
+      setDebouncedMapBounds(null);
+      return;
+    }
+    const t = window.setTimeout(() => setDebouncedMapBounds(mapViewportBounds), 320);
+    return () => window.clearTimeout(t);
+  }, [mapViewportBounds]);
+
+  const boundsInMapQuery = usePlacesInBounds(debouncedMapBounds, {
+    enabled: viewMode === "map" && debouncedMapBounds !== null,
+    themeId: selectedThemeId,
+  });
+
+  const mapPlacesForViewport = useMemo(() => {
+    if (viewMode !== "map") return filteredPlaces;
+    if (!mapViewportBounds) return filteredPlaces;
+    return filterPlacesByViewport(filteredPlaces, mapViewportBounds);
+  }, [viewMode, filteredPlaces, mapViewportBounds]);
+
+  const onMapViewportBoundsChange = useCallback((b: MapViewportBounds) => {
+    setMapViewportBounds(b);
+  }, []);
+
+  /** 지도 마커: bounds API 성공 시 DB 전역 캐시 결과, 아니면 선택 구역+클라이언트 필터 */
+  const mapPlacesForMap = useMemo(() => {
+    if (viewMode !== "map") return filteredPlaces;
+    if (
+      debouncedMapBounds !== null &&
+      boundsInMapQuery.data !== undefined &&
+      !boundsInMapQuery.isError
+    ) {
+      return boundsInMapQuery.data.places;
+    }
+    return mapPlacesForViewport;
+  }, [
+    viewMode,
+    filteredPlaces,
+    debouncedMapBounds,
+    boundsInMapQuery.data,
+    boundsInMapQuery.isError,
+    mapPlacesForViewport,
+  ]);
 
   const listBody = (
     <>
@@ -280,53 +302,97 @@ const Index = () => {
         </div>
       </header>
 
+      {/* 데이터 준비 후 지도를 목록과 동시에 마운트(숨김) → 지도 탭 시 바로 표시 */}
+      {!isLoading && !isError && (
+        <div
+          className={cn(
+            "fixed left-0 right-0 top-14 z-[5] h-[calc(100dvh-3.5rem)] w-full",
+            viewMode === "list"
+              ? "pointer-events-none invisible opacity-0"
+              : "z-[20] opacity-100"
+          )}
+          aria-hidden={viewMode === "list"}
+        >
+          <div className="relative h-full w-full">
+            <KakaoMap
+              center={DEFAULT_DISTRICT_MAP_CENTER}
+              places={mapPlacesForMap}
+              fitBoundsSource={filteredPlaces}
+              onSelectPlace={(place) => setDetailPlace(place as KakaoPlace)}
+              markerVariant="pill"
+              showUserMarker={false}
+              fitBoundsToPlaces={filteredPlaces.length > 0}
+              mapActive={viewMode === "map"}
+              trackViewportBounds={viewMode === "map"}
+              onViewportBoundsChange={onMapViewportBoundsChange}
+              showMyLocationButton={viewMode === "map"}
+              className="h-full w-full min-h-0"
+            />
+            {filteredPlaces.length === 0 && (
+              <div className="pointer-events-none absolute inset-x-0 top-4 flex justify-center px-4">
+                <div className="max-w-sm rounded-xl border border-border bg-background/95 px-4 py-3 text-center text-sm text-muted-foreground shadow-md backdrop-blur-sm">
+                  이 지역에 표시할 술집이 없어요
+                </div>
+              </div>
+            )}
+            {filteredPlaces.length > 0 &&
+              mapPlacesForMap.length === 0 &&
+              viewMode === "map" &&
+              mapViewportBounds !== null && (
+                <div className="pointer-events-none absolute inset-x-0 top-4 flex justify-center px-4">
+                  <div className="max-w-sm rounded-xl border border-border bg-background/95 px-4 py-3 text-center text-sm text-muted-foreground shadow-md backdrop-blur-sm">
+                    이 화면 범위에 술집이 없어요 · 지도를 움직여 보세요
+                  </div>
+                </div>
+              )}
+          </div>
+        </div>
+      )}
+
+      {viewMode === "map" && isLoading && (
+        <div className="fixed inset-x-0 bottom-0 top-14 z-[20] flex flex-col items-center justify-center bg-background">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          <p className="mt-3 text-sm text-muted-foreground">술집을 찾고 있어요…</p>
+        </div>
+      )}
+
+      {viewMode === "map" && isError && (
+        <div className="fixed inset-x-0 bottom-0 top-14 z-[20] flex flex-col items-center justify-center bg-background px-4 text-center">
+          <p className="text-lg font-medium text-destructive">데이터를 불러오지 못했어요</p>
+          <p className="mt-1 text-sm text-muted-foreground">잠시 후 다시 시도해 주세요</p>
+        </div>
+      )}
+
       <main
         className={cn(
           "mx-auto flex w-full max-w-3xl flex-1 flex-col min-h-0",
           viewMode === "list"
-            ? "px-4 pt-5 pb-[calc(7rem+env(safe-area-inset-bottom,0px))]"
-            : "px-0 pb-0 pt-0",
-          viewMode === "map" && "max-w-none"
+            ? "relative z-10 bg-background px-4 pt-5 pb-[calc(7rem+env(safe-area-inset-bottom,0px))]"
+            : "relative z-0 max-w-none min-h-0 p-0"
         )}
       >
-        {viewMode === "list" ? listBody : mapBody}
+        {viewMode === "list" ? (
+          listBody
+        ) : (
+          <div
+            className="pointer-events-none h-[calc(100dvh-3.5rem)] w-full shrink-0"
+            aria-hidden
+          />
+        )}
       </main>
 
-      {viewMode === "list" && <Footer />}
-
       {viewMode === "list" && (
-        <button
-          type="button"
-          onClick={() => setViewMode("map")}
-          className={cn(
-            "fixed left-1/2 z-[110] flex min-h-[44px] -translate-x-1/2 touch-manipulation items-center justify-center gap-2 rounded-full border border-border bg-background px-5 py-3 text-sm font-semibold text-foreground shadow-lg",
-            "bottom-[max(1.5rem,env(safe-area-inset-bottom,0px))]",
-            "hover:bg-muted/80 active:opacity-90",
-            "[-webkit-tap-highlight-color:transparent]"
-          )}
-          aria-label="지도로 보기"
-        >
-          <Map className="h-5 w-5 shrink-0 pointer-events-none" strokeWidth={2} aria-hidden />
-          지도
-        </button>
+        <div className="relative z-10 bg-background">
+          <Footer />
+        </div>
       )}
 
-      {viewMode === "map" && (
-        <button
-          type="button"
-          onClick={() => setViewMode("list")}
-          className={cn(
-            "fixed left-1/2 z-[110] flex min-h-[44px] -translate-x-1/2 touch-manipulation items-center justify-center gap-2 rounded-full border border-border bg-background px-5 py-3 text-sm font-semibold text-foreground shadow-lg",
-            "bottom-[max(1.5rem,env(safe-area-inset-bottom,0px))]",
-            "hover:bg-muted/80 active:opacity-90",
-            "[-webkit-tap-highlight-color:transparent]"
-          )}
-          aria-label="목록으로 돌아가기"
-        >
-          <LayoutList className="h-5 w-5 shrink-0 pointer-events-none" strokeWidth={2} aria-hidden />
-          목록
-        </button>
-      )}
+      <ViewModeFab
+        viewMode={viewMode}
+        onSwitchToMap={() => setViewMode("map")}
+        onSwitchToList={() => setViewMode("list")}
+        hidden={!!detailPlace || regionOpen}
+      />
 
       <RegionSelector
         open={regionOpen}

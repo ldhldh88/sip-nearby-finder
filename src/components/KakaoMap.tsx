@@ -1,5 +1,10 @@
-import { useEffect, useRef, useState } from "react";
+"use client";
+
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Loader2, LocateFixed } from "lucide-react";
+import { toast } from "sonner";
 import { getKakaoSdkUrl } from "@/lib/kakao-client";
+import type { MapViewportBounds } from "@/lib/mapViewport";
 import { cn } from "@/lib/utils";
 
 declare global {
@@ -30,6 +35,21 @@ interface KakaoMapProps {
   showUserMarker?: boolean;
   /** true면 마커 좌표에 맞춰 지도 bounds 조정 (주변 핫플 미니맵은 false) */
   fitBoundsToPlaces?: boolean;
+  /**
+   * fitBounds에만 사용할 장소 목록. 지정 시 뷰포트로 줄인 `places`와 달리 구역 전체로만 자동 맞춤(팬할 때마다 줌 리셋 방지).
+   * 미지정 시 `places`로 맞춤.
+   */
+  fitBoundsSource?: MapPlace[];
+  /** true면 idle 시 보이는 영역(bounds)을 부모에 전달 — 지도 뷰에서 마커를 뷰포트에 맞출 때 사용 */
+  trackViewportBounds?: boolean;
+  onViewportBoundsChange?: (bounds: MapViewportBounds) => void;
+  /**
+   * 목록 뷰에서 맵을 미리 마운트할 때 false. true로 바뀌는 순간 relayout(바로 표시).
+   * @default true
+   */
+  mapActive?: boolean;
+  /** true면 우측 하단에 현재 위치로 이동 버튼 표시 (Geolocation API) */
+  showMyLocationButton?: boolean;
 }
 
 let sdkLoaded = false;
@@ -102,11 +122,25 @@ const KakaoMap = ({
   markerVariant = "default",
   showUserMarker = true,
   fitBoundsToPlaces = false,
+  fitBoundsSource,
+  trackViewportBounds = false,
+  onViewportBoundsChange,
+  mapActive = true,
+  showMyLocationButton = false,
 }: KakaoMapProps) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<any>(null);
   const markersRef = useRef<any[]>([]);
+  const myLocationMarkerRef = useRef<any>(null);
+  const viewportCbRef = useRef(onViewportBoundsChange);
+  viewportCbRef.current = onViewportBoundsChange;
   const [ready, setReady] = useState(false);
+  const [locating, setLocating] = useState(false);
+
+  const fitSource = useMemo(
+    () => (fitBoundsSource !== undefined ? fitBoundsSource : places),
+    [fitBoundsSource, places]
+  );
 
   useEffect(() => {
     let mounted = true;
@@ -143,6 +177,10 @@ const KakaoMap = ({
 
     return () => {
       if (userMarker) userMarker.setMap(null);
+      if (myLocationMarkerRef.current) {
+        myLocationMarkerRef.current.setMap(null);
+        myLocationMarkerRef.current = null;
+      }
     };
   }, [ready, center.lat, center.lng, showUserMarker]);
 
@@ -211,28 +249,195 @@ const KakaoMap = ({
     const { kakao } = window;
     const map = mapRef.current;
 
-    if (places.length === 0) return;
+    if (fitSource.length === 0) return;
 
-    if (places.length === 1) {
-      const p = places[0];
+    if (fitSource.length === 1) {
+      const p = fitSource[0];
       map.setCenter(new kakao.maps.LatLng(parseFloat(p.y), parseFloat(p.x)));
       map.setLevel(4);
+      queueMicrotask(() => map.relayout());
       return;
     }
 
     const bounds = new kakao.maps.LatLngBounds();
-    places.forEach((place) => {
+    fitSource.forEach((place) => {
       bounds.extend(new kakao.maps.LatLng(parseFloat(place.y), parseFloat(place.x)));
     });
     map.setBounds(bounds);
-  }, [ready, places, fitBoundsToPlaces]);
+    queueMicrotask(() => map.relayout());
+  }, [ready, fitSource, fitBoundsToPlaces]);
+
+  /** 지도 이동·줌이 끝날 때(idle) 보이는 영역을 부모에 전달 — 카카오맵 샘플 패턴 */
+  useEffect(() => {
+    if (!ready || !mapRef.current || !trackViewportBounds || !mapActive) return;
+    const map = mapRef.current;
+    const { kakao } = window;
+    let timeoutId: ReturnType<typeof setTimeout>;
+
+    const emit = () => {
+      if (!mapRef.current) return;
+      const b = map.getBounds();
+      const sw = b.getSouthWest();
+      const ne = b.getNorthEast();
+      viewportCbRef.current?.({
+        swLat: sw.getLat(),
+        swLng: sw.getLng(),
+        neLat: ne.getLat(),
+        neLng: ne.getLng(),
+      });
+    };
+
+    const onIdle = () => {
+      clearTimeout(timeoutId);
+      timeoutId = setTimeout(emit, 120);
+    };
+
+    kakao.maps.event.addListener(map, "idle", onIdle);
+    queueMicrotask(onIdle);
+
+    return () => {
+      clearTimeout(timeoutId);
+      kakao.maps.event.removeListener(map, "idle", onIdle);
+    };
+  }, [ready, trackViewportBounds, mapActive]);
+
+  /** 목록에서 미리 마운트 후 지도 탭 시 보이게 전환 */
+  useEffect(() => {
+    if (!ready || !mapRef.current || !mapActive) return;
+    const map = mapRef.current;
+    const relayout = () => {
+      try {
+        map.relayout();
+      } catch {
+        /* ignore */
+      }
+    };
+    relayout();
+    const raf = requestAnimationFrame(() => requestAnimationFrame(relayout));
+    const t0 = window.setTimeout(relayout, 0);
+    const t1 = window.setTimeout(relayout, 50);
+    const t2 = window.setTimeout(relayout, 200);
+    return () => {
+      cancelAnimationFrame(raf);
+      window.clearTimeout(t0);
+      window.clearTimeout(t1);
+      window.clearTimeout(t2);
+    };
+  }, [ready, mapActive]);
+
+  /** 컨테이너가 0크기였다가 열리는 경우(목록→지도 전환) 타일이 안 그려지는 문제 — relayout으로 1탭처럼 보이게 함 */
+  useEffect(() => {
+    if (!ready || !mapRef.current || !containerRef.current) return;
+    const map = mapRef.current;
+    const container = containerRef.current;
+
+    const relayout = () => {
+      try {
+        map.relayout();
+      } catch {
+        /* ignore */
+      }
+    };
+
+    relayout();
+    const raf1 = requestAnimationFrame(relayout);
+    const raf2 = requestAnimationFrame(() => requestAnimationFrame(relayout));
+    const t1 = window.setTimeout(relayout, 50);
+    const t2 = window.setTimeout(relayout, 200);
+    const ro = new ResizeObserver(() => relayout());
+    ro.observe(container);
+    window.addEventListener("resize", relayout, { passive: true });
+
+    return () => {
+      cancelAnimationFrame(raf1);
+      cancelAnimationFrame(raf2);
+      window.clearTimeout(t1);
+      window.clearTimeout(t2);
+      ro.disconnect();
+      window.removeEventListener("resize", relayout);
+    };
+  }, [ready]);
+
+  const handleMyLocation = useCallback(() => {
+    if (!ready || !mapRef.current) return;
+    if (typeof navigator === "undefined" || !navigator.geolocation) {
+      toast.error("이 환경에서는 위치 정보를 사용할 수 없어요");
+      return;
+    }
+
+    setLocating(true);
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setLocating(false);
+        const { kakao } = window;
+        const map = mapRef.current;
+        const lat = pos.coords.latitude;
+        const lng = pos.coords.longitude;
+        const latLng = new kakao.maps.LatLng(lat, lng);
+        map.setCenter(latLng);
+        map.setLevel(4);
+        queueMicrotask(() => {
+          try {
+            map.relayout();
+          } catch {
+            /* ignore */
+          }
+        });
+
+        if (myLocationMarkerRef.current) {
+          myLocationMarkerRef.current.setPosition(latLng);
+        } else {
+          myLocationMarkerRef.current = new kakao.maps.Marker({
+            position: latLng,
+            map,
+          });
+        }
+      },
+      (err) => {
+        setLocating(false);
+        const msg =
+          err.code === 1
+            ? "위치 권한이 거부되었어요"
+            : err.code === 2
+              ? "위치를 가져올 수 없어요"
+              : err.code === 3
+                ? "위치 요청 시간이 초과되었어요"
+                : "위치를 가져오지 못했어요";
+        toast.error(msg);
+      },
+      { enableHighAccuracy: true, timeout: 12_000, maximumAge: 0 }
+    );
+  }, [ready]);
 
   return (
-    <div ref={containerRef} className={cn("min-h-[250px]", className)}>
+    <div className={cn("relative min-h-[250px]", className)}>
+      <div ref={containerRef} className="min-h-[250px] h-full w-full" />
       {!ready && (
-        <div className="flex h-full items-center justify-center bg-muted rounded-xl">
+        <div className="pointer-events-none absolute inset-0 flex items-center justify-center rounded-xl bg-muted">
           <span className="text-sm text-muted-foreground">지도 로딩 중…</span>
         </div>
+      )}
+      {showMyLocationButton && ready && (
+        <button
+          type="button"
+          onClick={handleMyLocation}
+          disabled={locating}
+          className={cn(
+            "absolute bottom-4 right-4 z-[30] inline-flex touch-manipulation select-none items-center justify-center",
+            "h-11 w-11 rounded-full border border-border/90 bg-background/95 text-foreground shadow-md backdrop-blur-sm",
+            "transition-[transform,box-shadow] active:scale-[0.97] disabled:opacity-70",
+            "[-webkit-tap-highlight-color:transparent]",
+            "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+          )}
+          style={{ marginBottom: "env(safe-area-inset-bottom, 0px)" }}
+          aria-label="현재 위치로 이동"
+        >
+          {locating ? (
+            <Loader2 className="h-5 w-5 shrink-0 animate-spin" aria-hidden />
+          ) : (
+            <LocateFixed className="h-5 w-5 shrink-0" strokeWidth={2} aria-hidden />
+          )}
+        </button>
       )}
     </div>
   );
