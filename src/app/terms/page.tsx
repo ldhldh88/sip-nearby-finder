@@ -2,9 +2,15 @@ import type { Metadata } from "next";
 import LegalPageShell from "@/components/LegalPageShell";
 
 export const metadata: Metadata = {
-  title: "이용약관 | FirePlace",
-  description: "FirePlace 서비스 이용에 관한 약관",
+  title: "이용약관",
+  description: "FirePlace(파이어플레이스) 서비스 이용에 관한 약관",
   robots: { index: true, follow: true },
+  openGraph: {
+    title: "이용약관 | FirePlace",
+    description: "서비스 이용약관",
+    locale: "ko_KR",
+    type: "website",
+  },
 };
 
 export default function TermsPage() {

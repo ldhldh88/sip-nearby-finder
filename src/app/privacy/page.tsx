@@ -6,9 +6,15 @@ const contact =
   process.env.NEXT_PUBLIC_CONTACT_EMAIL?.trim() || null;
 
 export const metadata: Metadata = {
-  title: "개인정보처리방침 | FirePlace",
-  description: "FirePlace 개인정보 수집·이용 및 제3자(광고 포함) 안내",
+  title: "개인정보처리방침",
+  description: "FirePlace(파이어플레이스) 개인정보 수집·이용 및 제3자(광고 포함) 안내",
   robots: { index: true, follow: true },
+  openGraph: {
+    title: "개인정보처리방침 | FirePlace",
+    description: "개인정보 처리방침",
+    locale: "ko_KR",
+    type: "website",
+  },
 };
 
 export default function PrivacyPage() {

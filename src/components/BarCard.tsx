@@ -1,4 +1,5 @@
 import { motion } from "framer-motion";
+import Link from "next/link";
 import { MapPin, Phone, ExternalLink } from "lucide-react";
 import { KakaoPlace } from "@/lib/kakao";
 import { getShortCategory, getCategoryColor } from "@/hooks/useKakaoSearch";
@@ -43,7 +44,13 @@ const BarCard = ({ place, index, onClick, themes, likeCount = 0 }: BarCardProps)
           <div>
             <div className="flex items-start justify-between gap-2">
               <h3 className="text-lg font-semibold text-card-foreground truncate">
-                {place.place_name}
+                <Link
+                  href={`/bar/${encodeURIComponent(place.id)}`}
+                  onClick={(e) => e.stopPropagation()}
+                  className="hover:underline"
+                >
+                  {place.place_name}
+                </Link>
               </h3>
               <div className="flex items-center gap-2 flex-shrink-0">
                 <LikeButton kakaoPlaceId={place.id} initialCount={likeCount} />

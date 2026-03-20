@@ -1,4 +1,5 @@
 import { motion } from "framer-motion";
+import Link from "next/link";
 import { MapPin, Flame } from "lucide-react";
 import { HotPlace } from "@/hooks/useNearbyBars";
 import { getShortCategory, getCategoryColor } from "@/hooks/useKakaoSearch";
@@ -44,7 +45,15 @@ const HotBarCard = ({ place, rank, onClick }: HotBarCardProps) => {
 
       {/* Info */}
       <div className="min-w-0 flex-1">
-        <h4 className="text-sm font-semibold text-card-foreground truncate">{place.place_name}</h4>
+        <h4 className="text-sm font-semibold text-card-foreground truncate">
+          <Link
+            href={`/bar/${encodeURIComponent(place.id)}`}
+            onClick={(e) => e.stopPropagation()}
+            className="hover:underline"
+          >
+            {place.place_name}
+          </Link>
+        </h4>
         <div className="mt-1 flex items-center gap-2 flex-wrap">
           <span className={`inline-flex rounded-full px-1.5 py-0.5 text-[10px] font-medium ${colorClass}`}>
             {shortCategory}

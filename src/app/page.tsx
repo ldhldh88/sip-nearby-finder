@@ -1,22 +1,16 @@
-"use client";
+import type { Metadata } from "next";
+import HomePageClient from "./HomePageClient";
+import { buildHomeMetadata } from "@/lib/seo/home-metadata";
 
-import { Suspense } from "react";
-import { Loader2 } from "lucide-react";
-import Index from "../views/Index";
+type PageProps = {
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
+};
 
-function PageFallback() {
-  return (
-    <div className="min-h-screen flex items-center justify-center bg-background">
-      <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-    </div>
-  );
+export async function generateMetadata({ searchParams }: PageProps): Promise<Metadata> {
+  const sp = (await searchParams) ?? {};
+  return buildHomeMetadata(sp);
 }
 
 export default function Page() {
-  return (
-    <Suspense fallback={<PageFallback />}>
-      <Index />
-    </Suspense>
-  );
+  return <HomePageClient />;
 }
-

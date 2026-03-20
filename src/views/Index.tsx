@@ -298,10 +298,15 @@ const Index = () => {
         <button
           type="button"
           onClick={() => setViewMode("map")}
-          className="fixed left-1/2 z-50 flex -translate-x-1/2 items-center gap-2 rounded-full border border-border bg-background px-5 py-3 text-sm font-semibold text-foreground shadow-lg transition-transform active:scale-95 hover:bg-muted/80 bottom-[max(1.5rem,env(safe-area-inset-bottom,0px))]"
+          className={cn(
+            "fixed left-1/2 z-[110] flex min-h-[44px] -translate-x-1/2 touch-manipulation items-center justify-center gap-2 rounded-full border border-border bg-background px-5 py-3 text-sm font-semibold text-foreground shadow-lg",
+            "bottom-[max(1.5rem,env(safe-area-inset-bottom,0px))]",
+            "hover:bg-muted/80 active:opacity-90",
+            "[-webkit-tap-highlight-color:transparent]"
+          )}
           aria-label="지도로 보기"
         >
-          <Map className="h-5 w-5 shrink-0" strokeWidth={2} aria-hidden />
+          <Map className="h-5 w-5 shrink-0 pointer-events-none" strokeWidth={2} aria-hidden />
           지도
         </button>
       )}
@@ -310,10 +315,15 @@ const Index = () => {
         <button
           type="button"
           onClick={() => setViewMode("list")}
-          className="fixed left-1/2 z-50 flex -translate-x-1/2 items-center gap-2 rounded-full border border-border bg-background px-5 py-3 text-sm font-semibold text-foreground shadow-lg transition-transform active:scale-95 hover:bg-muted/80 bottom-[max(1.5rem,env(safe-area-inset-bottom,0px))]"
+          className={cn(
+            "fixed left-1/2 z-[110] flex min-h-[44px] -translate-x-1/2 touch-manipulation items-center justify-center gap-2 rounded-full border border-border bg-background px-5 py-3 text-sm font-semibold text-foreground shadow-lg",
+            "bottom-[max(1.5rem,env(safe-area-inset-bottom,0px))]",
+            "hover:bg-muted/80 active:opacity-90",
+            "[-webkit-tap-highlight-color:transparent]"
+          )}
           aria-label="목록으로 돌아가기"
         >
-          <LayoutList className="h-5 w-5 shrink-0" strokeWidth={2} aria-hidden />
+          <LayoutList className="h-5 w-5 shrink-0 pointer-events-none" strokeWidth={2} aria-hidden />
           목록
         </button>
       )}
