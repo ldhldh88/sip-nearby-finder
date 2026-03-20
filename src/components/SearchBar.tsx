@@ -1,4 +1,7 @@
+"use client";
+
 import { useState, useRef, useEffect, useMemo } from "react";
+import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { Search, X, Loader2, MapPin } from "lucide-react";
 import { useBarSearch } from "@/hooks/useBarSearch";
@@ -13,15 +16,20 @@ interface SearchBarProps {
 
 const SearchBar = ({ onSelectPlace }: SearchBarProps) => {
   const [open, setOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
   const [query, setQuery] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
-  const { data: results, isLoading } = useBarSearch(query);
+  const { data: results, isLoading, isError } = useBarSearch(query);
 
   const placeIds = useMemo(
     () => (results || []).map((p) => p.id),
     [results]
   );
   const { data: districtMap } = usePlaceDistricts(placeIds);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     if (open) {
@@ -37,28 +45,22 @@ const SearchBar = ({ onSelectPlace }: SearchBarProps) => {
     onSelectPlace(place);
   };
 
-  return (
-    <>
-      <button
-        onClick={() => setOpen(true)}
-        className="rounded-full p-2 transition-colors hover:bg-muted"
-        aria-label="검색"
-      >
-        <Search className="h-5 w-5 text-foreground" />
-      </button>
-
+  /** 헤더의 backdrop-blur 등이 있으면 fixed 자식이 뷰포트가 아닌 헤더 박스에 묶여 패널·결과가 잘릴 수 있어 body로 포털링 */
+  const overlay =
+    mounted &&
+    createPortal(
       <AnimatePresence>
         {open && (
           <>
             <motion.div
-              className="fixed inset-0 z-40 bg-foreground/30"
+              className="fixed inset-0 z-[100] bg-foreground/30"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={() => setOpen(false)}
             />
             <motion.div
-              className="fixed inset-x-0 top-0 z-50 mx-auto max-w-3xl px-4 pt-3"
+              className="fixed inset-x-0 top-0 z-[100] mx-auto max-w-3xl px-4 pt-3"
               initial={{ opacity: 0, y: -20 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -20 }}
@@ -87,13 +89,19 @@ const SearchBar = ({ onSelectPlace }: SearchBarProps) => {
                     </div>
                   )}
 
-                  {!isLoading && results && results.length === 0 && (
+                  {isError && query.trim().length >= 2 && (
+                    <div className="py-8 text-center text-sm text-destructive">
+                      검색을 불러오지 못했어요
+                    </div>
+                  )}
+
+                  {!isLoading && !isError && results && results.length === 0 && (
                     <div className="py-8 text-center text-sm text-muted-foreground">
                       검색 결과가 없습니다
                     </div>
                   )}
 
-                  {!isLoading && results && results.length > 0 && (
+                  {!isLoading && !isError && results && results.length > 0 && (
                     <ul>
                       {results.map((place) => {
                         const short = getShortCategory(place.category_name);
@@ -153,7 +161,21 @@ const SearchBar = ({ onSelectPlace }: SearchBarProps) => {
             </motion.div>
           </>
         )}
-      </AnimatePresence>
+      </AnimatePresence>,
+      document.body
+    );
+
+  return (
+    <>
+      <button
+        onClick={() => setOpen(true)}
+        className="rounded-full p-2 transition-colors hover:bg-muted"
+        aria-label="검색"
+      >
+        <Search className="h-5 w-5 text-foreground" />
+      </button>
+
+      {overlay}
     </>
   );
 };
