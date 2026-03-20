@@ -2,7 +2,7 @@ import Link from "next/link";
 
 const Footer = () => {
   return (
-    <footer className="border-t border-border bg-card/50 backdrop-blur-sm">
+    <footer className="border-t border-border bg-muted/25 backdrop-blur-sm">
       <div className="mx-auto max-w-3xl px-4 py-6 text-center">
         <nav className="flex flex-wrap items-center justify-center gap-x-1 gap-y-1 text-xs text-muted-foreground">
           <Link href="/about" className="px-2 py-1 transition-colors hover:text-foreground">

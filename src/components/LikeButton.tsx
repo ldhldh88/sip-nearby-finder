@@ -22,7 +22,7 @@ const LikeButton = ({ kakaoPlaceId, initialCount = 0 }: LikeButtonProps) => {
     >
       <motion.div whileTap={{ scale: 1.4 }} transition={{ type: "spring", stiffness: 500, damping: 15 }}>
         <Heart
-          className="h-5 w-5 text-rose-400 transition-colors group-hover:text-rose-500 group-active:fill-rose-400"
+          className="h-5 w-5 text-[#FF833C] transition-opacity hover:opacity-80 group-active:fill-[#FF833C]"
           fill={displayCount > 0 ? "currentColor" : "none"}
         />
       </motion.div>

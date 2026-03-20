@@ -12,11 +12,11 @@ const ThemeFilter = ({ selectedThemeId, onSelect }: ThemeFilterProps) => {
   if (isLoading || !themes || themes.length === 0) return null;
 
   return (
-    <div className="mb-4 flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
+    <div className="mb-4 flex flex-wrap gap-2">
       <button
         onClick={() => onSelect(null)}
         className={cn(
-          "shrink-0 rounded-full px-4 py-1.5 text-sm font-medium transition-colors",
+          "rounded-full px-4 py-1.5 text-sm font-medium transition-colors",
           selectedThemeId === null
             ? "bg-primary text-primary-foreground shadow-sm"
             : "bg-muted text-muted-foreground hover:bg-muted/80"
@@ -29,7 +29,7 @@ const ThemeFilter = ({ selectedThemeId, onSelect }: ThemeFilterProps) => {
           key={theme.id}
           onClick={() => onSelect(selectedThemeId === theme.id ? null : theme.id)}
           className={cn(
-            "shrink-0 rounded-full px-4 py-1.5 text-sm font-medium transition-colors",
+            "rounded-full px-4 py-1.5 text-sm font-medium transition-colors",
             selectedThemeId === theme.id
               ? "bg-primary text-primary-foreground shadow-sm"
               : "bg-muted text-muted-foreground hover:bg-muted/80"
