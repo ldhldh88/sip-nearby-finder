@@ -30,3 +30,6 @@ dist-ssr
 .env.*
 !.env.example
 *.env
+
+# Next.js build / dev output
+.next/
