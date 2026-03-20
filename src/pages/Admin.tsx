@@ -10,8 +10,8 @@ import { KakaoPlace } from "@/lib/kakao";
 import { Lock, Search, MapPin, Tag, Plus, Pencil, Trash2, Store } from "lucide-react";
 import AdminRegions from "@/components/AdminRegions";
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-const anonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+const anonKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!;
 
 interface Theme {
   id: string;
@@ -33,7 +33,10 @@ function adminFetch(token: string, body: Record<string, unknown>) {
 }
 
 export default function Admin() {
-  const [token, setToken] = useState(() => sessionStorage.getItem("admin_token") || "");
+  const [token, setToken] = useState(() => {
+    if (typeof sessionStorage === "undefined") return "";
+    return sessionStorage.getItem("admin_token") || "";
+  });
   const [password, setPassword] = useState("");
   const [loginError, setLoginError] = useState("");
   const [loginLoading, setLoginLoading] = useState(false);
@@ -169,7 +172,14 @@ export default function Admin() {
     <div className="min-h-screen bg-background">
       <header className="border-b bg-card px-4 py-3 flex items-center justify-between">
         <h1 className="text-lg font-bold">🍺 관리자</h1>
-        <Button variant="ghost" size="sm" onClick={() => { setToken(""); sessionStorage.removeItem("admin_token"); }}>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => {
+            setToken("");
+            if (typeof sessionStorage !== "undefined") sessionStorage.removeItem("admin_token");
+          }}
+        >
           로그아웃
         </Button>
       </header>

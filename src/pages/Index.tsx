@@ -1,5 +1,5 @@
 import { useState, useMemo, useCallback } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useRouter, useSearchParams } from "next/navigation";
 import { ChevronDown, Loader2, RefreshCw } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import RegionSelector from "@/components/RegionSelector";
@@ -16,7 +16,8 @@ import Footer from "@/components/Footer";
 import { toast } from "sonner";
 
 const Index = () => {
-  const [searchParams, setSearchParams] = useSearchParams();
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const [regionOpen, setRegionOpen] = useState(false);
   const [detailPlace, setDetailPlace] = useState<KakaoPlace | null>(null);
   const [selectedThemeId, setSelectedThemeId] = useState<string | null>(null);
@@ -36,10 +37,11 @@ const Index = () => {
   const barMetaMap = districtData?.metaMap ?? {};
 
   const handleSelectRegion = (province: string, district: string | null) => {
-    const params = new URLSearchParams();
+    const params = new URLSearchParams(searchParams.toString());
     params.set("province", province);
     if (district) params.set("district", district);
-    setSearchParams(params);
+    else params.delete("district");
+    router.push(`/?${params.toString()}`);
   };
 
   const handleSync = useCallback(async () => {

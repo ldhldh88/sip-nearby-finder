@@ -1,9 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { KakaoPlace } from "@/lib/kakao";
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-const anonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
-
 async function searchBarsByName(keyword: string): Promise<KakaoPlace[]> {
   const query = `${keyword} 술집`;
   const params = new URLSearchParams({
@@ -14,13 +11,7 @@ async function searchBarsByName(keyword: string): Promise<KakaoPlace[]> {
     mode: "simple",
   });
 
-  const res = await fetch(`${supabaseUrl}/functions/v1/kakao-proxy?${params}`, {
-    headers: {
-      Authorization: `Bearer ${anonKey}`,
-      apikey: anonKey,
-    },
-  });
-
+  const res = await fetch(`/api/kakao-search?${params}`);
   if (!res.ok) throw new Error(`Search error: ${res.status}`);
   const data = await res.json();
   return data.documents ?? [];

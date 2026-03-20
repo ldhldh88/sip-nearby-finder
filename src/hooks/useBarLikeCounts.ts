@@ -1,5 +1,4 @@
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
 
 export interface BarMeta {
   like_count: number;
@@ -17,21 +16,12 @@ export function useBarMeta(placeIds: string[]) {
     queryKey: ["bar-meta", placeIds],
     queryFn: async (): Promise<BarMetaMap> => {
       if (placeIds.length === 0) return {};
-      const { data } = await supabase
-        .from("bar_meta")
-        .select("kakao_place_id, like_count, view_count, bookmark_count, hot_score")
-        .in("kakao_place_id", placeIds);
 
-      const map: BarMetaMap = {};
-      for (const row of data || []) {
-        map[row.kakao_place_id] = {
-          like_count: row.like_count,
-          view_count: row.view_count,
-          bookmark_count: row.bookmark_count,
-          hot_score: row.hot_score,
-        };
-      }
-      return map;
+      const res = await fetch(
+        `/api/bar-meta?placeIds=${encodeURIComponent(placeIds.join(","))}`
+      );
+      if (!res.ok) throw new Error(`bar-meta fetch failed: ${res.status}`);
+      return (await res.json()) as BarMetaMap;
     },
     enabled: placeIds.length > 0,
     staleTime: 30_000,

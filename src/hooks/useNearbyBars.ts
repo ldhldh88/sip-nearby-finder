@@ -26,9 +26,6 @@ async function fetchNearbyBars(
   lat: number,
   radius: number
 ): Promise<NearbyResult> {
-  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-  const anonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
-
   const params = new URLSearchParams({
     x: String(lng),
     y: String(lat),
@@ -36,13 +33,7 @@ async function fetchNearbyBars(
     sort: "accuracy",
   });
 
-  const res = await fetch(`${supabaseUrl}/functions/v1/kakao-nearby?${params}`, {
-    headers: {
-      Authorization: `Bearer ${anonKey}`,
-      apikey: anonKey,
-    },
-  });
-
+  const res = await fetch(`/api/kakao-nearby?${params}`);
   if (!res.ok) throw new Error(`Nearby search error: ${res.status}`);
   return res.json();
 }

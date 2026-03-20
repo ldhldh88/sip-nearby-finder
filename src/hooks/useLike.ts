@@ -1,5 +1,4 @@
 import { useState, useRef, useCallback, useEffect } from "react";
-import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
 
 /**
@@ -27,22 +26,13 @@ export function useLike(kakaoPlaceId: string, initialCount: number = 0) {
     flushing.current = true;
 
     try {
-      const { data: existing } = await supabase
-        .from("bar_meta")
-        .select("like_count")
-        .eq("kakao_place_id", kakaoPlaceId)
-        .maybeSingle();
+      const res = await fetch("/api/bar-meta/like", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ kakao_place_id: kakaoPlaceId, increment: count }),
+      });
 
-      if (existing) {
-        await supabase
-          .from("bar_meta")
-          .update({ like_count: existing.like_count + count })
-          .eq("kakao_place_id", kakaoPlaceId);
-      } else {
-        await supabase
-          .from("bar_meta")
-          .insert({ kakao_place_id: kakaoPlaceId, like_count: count });
-      }
+      if (!res.ok) throw new Error(`bar-meta/like failed: ${res.status}`);
 
       // Invalidate bar-meta cache so list updates
       queryClient.invalidateQueries({ queryKey: ["bar-meta"] });

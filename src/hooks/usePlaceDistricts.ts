@@ -1,5 +1,4 @@
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
 
 interface PlaceDistrictInfo {
   districtId: string;
@@ -12,22 +11,12 @@ export function usePlaceDistricts(placeIds: string[]) {
     queryFn: async () => {
       if (placeIds.length === 0) return {};
 
-      const { data, error } = await supabase
-        .from("cached_places")
-        .select("kakao_place_id, district_id, districts!inner(name)")
-        .in("kakao_place_id", placeIds);
+      const res = await fetch(
+        `/api/place-districts?placeIds=${encodeURIComponent(placeIds.join(","))}`
+      );
+      if (!res.ok) throw new Error(`place-districts fetch failed: ${res.status}`);
 
-      if (error) throw error;
-
-      const map: Record<string, PlaceDistrictInfo> = {};
-      for (const row of data || []) {
-        const districtData = row.districts as any;
-        map[row.kakao_place_id] = {
-          districtId: row.district_id,
-          districtName: districtData?.name ?? "",
-        };
-      }
-      return map;
+      return (await res.json()) as Record<string, PlaceDistrictInfo>;
     },
     enabled: placeIds.length > 0,
     staleTime: 5 * 60 * 1000,

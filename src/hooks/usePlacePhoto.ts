@@ -1,8 +1,5 @@
 import { useState, useEffect } from "react";
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-const anonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
-
 // Client-side in-memory cache
 const photoCache = new Map<string, { main: string | null; photos: string[] }>();
 const pendingRequests = new Map<string, Promise<{ main: string | null; photos: string[] }>>();
@@ -18,15 +15,7 @@ async function fetchPlacePhotos(placeId: string): Promise<{ main: string | null;
 
   const promise = (async () => {
     try {
-      const res = await fetch(
-        `${supabaseUrl}/functions/v1/kakao-place-photo?place_id=${placeId}`,
-        {
-          headers: {
-            Authorization: `Bearer ${anonKey}`,
-            apikey: anonKey,
-          },
-        }
-      );
+      const res = await fetch(`/api/kakao-place-photo?placeId=${encodeURIComponent(placeId)}`);
 
       if (!res.ok) {
         const result = { main: null, photos: [] as string[] };

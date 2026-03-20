@@ -1,0 +1,141 @@
+{
+  "version": 3,
+  "pages404": true,
+  "appType": "hybrid",
+  "caseSensitive": false,
+  "basePath": "",
+  "redirects": [
+    {
+      "source": "/:path+/",
+      "destination": "/:path+",
+      "internal": true,
+      "priority": true,
+      "statusCode": 308,
+      "regex": "^(?:/((?:[^/]+?)(?:/(?:[^/]+?))*))/$"
+    }
+  ],
+  "headers": [],
+  "onMatchHeaders": [],
+  "rewrites": {
+    "beforeFiles": [],
+    "afterFiles": [],
+    "fallback": []
+  },
+  "dynamicRoutes": [],
+  "staticRoutes": [
+    {
+      "page": "/",
+      "regex": "^/(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/(?:/)?$"
+    },
+    {
+      "page": "/_not-found",
+      "regex": "^/_not\\-found(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/_not\\-found(?:/)?$"
+    },
+    {
+      "page": "/admin",
+      "regex": "^/admin(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/admin(?:/)?$"
+    },
+    {
+      "page": "/Admin",
+      "regex": "^/Admin(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/Admin(?:/)?$"
+    },
+    {
+      "page": "/api/bar-meta",
+      "regex": "^/api/bar\\-meta(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/bar\\-meta(?:/)?$"
+    },
+    {
+      "page": "/api/bar-meta/like",
+      "regex": "^/api/bar\\-meta/like(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/bar\\-meta/like(?:/)?$"
+    },
+    {
+      "page": "/api/bar-themes",
+      "regex": "^/api/bar\\-themes(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/bar\\-themes(?:/)?$"
+    },
+    {
+      "page": "/api/district-bars",
+      "regex": "^/api/district\\-bars(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/district\\-bars(?:/)?$"
+    },
+    {
+      "page": "/api/kakao-place-photo",
+      "regex": "^/api/kakao\\-place\\-photo(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/kakao\\-place\\-photo(?:/)?$"
+    },
+    {
+      "page": "/api/kakao-search",
+      "regex": "^/api/kakao\\-search(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/kakao\\-search(?:/)?$"
+    },
+    {
+      "page": "/api/place-districts",
+      "regex": "^/api/place\\-districts(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/place\\-districts(?:/)?$"
+    },
+    {
+      "page": "/api/regions",
+      "regex": "^/api/regions(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/regions(?:/)?$"
+    },
+    {
+      "page": "/api/theme-filtered-bars",
+      "regex": "^/api/theme\\-filtered\\-bars(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/theme\\-filtered\\-bars(?:/)?$"
+    },
+    {
+      "page": "/api/themes",
+      "regex": "^/api/themes(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/themes(?:/)?$"
+    },
+    {
+      "page": "/Index",
+      "regex": "^/Index(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/Index(?:/)?$"
+    },
+    {
+      "page": "/NotFound",
+      "regex": "^/NotFound(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/NotFound(?:/)?$"
+    }
+  ],
+  "dataRoutes": [],
+  "rsc": {
+    "header": "rsc",
+    "varyHeader": "rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch",
+    "prefetchHeader": "next-router-prefetch",
+    "didPostponeHeader": "x-nextjs-postponed",
+    "contentTypeHeader": "text/x-component",
+    "suffix": ".rsc",
+    "prefetchSegmentHeader": "next-router-segment-prefetch",
+    "prefetchSegmentSuffix": ".segment.rsc",
+    "prefetchSegmentDirSuffix": ".segments",
+    "clientParamParsing": false,
+    "dynamicRSCPrerender": false
+  },
+  "rewriteHeaders": {
+    "pathHeader": "x-nextjs-rewritten-path",
+    "queryHeader": "x-nextjs-rewritten-query"
+  }
+}

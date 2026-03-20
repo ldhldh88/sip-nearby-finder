@@ -1,5 +1,4 @@
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
 
 export interface Province {
   id: string;
@@ -23,16 +22,12 @@ export function useRegionsRaw() {
   return useQuery({
     queryKey: ["provinces-districts"],
     queryFn: async () => {
-      const [{ data: provinces, error: pErr }, { data: districts, error: dErr }] =
-        await Promise.all([
-          supabase.from("provinces").select("*").order("sort_order"),
-          supabase.from("districts").select("*").order("sort_order"),
-        ]);
-      if (pErr) throw pErr;
-      if (dErr) throw dErr;
+      const res = await fetch("/api/regions");
+      if (!res.ok) throw new Error(`regions fetch failed: ${res.status}`);
+      const data = (await res.json()) as { provinces: Province[]; districts: District[] };
       return {
-        provinces: (provinces || []) as Province[],
-        districts: (districts || []) as District[],
+        provinces: data.provinces ?? [],
+        districts: data.districts ?? [],
       };
     },
   });

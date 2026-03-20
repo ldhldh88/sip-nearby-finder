@@ -1,5 +1,4 @@
 import { useQuery, keepPreviousData } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
 import { KakaoPlace } from "@/lib/kakao";
 
 export interface Theme {
@@ -12,12 +11,9 @@ export function useThemes() {
   return useQuery({
     queryKey: ["themes"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("themes")
-        .select("*")
-        .order("name");
-      if (error) throw error;
-      return data as Theme[];
+      const res = await fetch("/api/themes");
+      if (!res.ok) throw new Error(`themes fetch failed: ${res.status}`);
+      return (await res.json()) as Theme[];
     },
     staleTime: 5 * 60 * 1000,
   });
@@ -28,18 +24,12 @@ export function useBarThemes(placeIds: string[]) {
     queryKey: ["bar-themes", placeIds],
     queryFn: async () => {
       if (placeIds.length === 0) return {};
-      const { data, error } = await supabase
-        .from("bar_themes")
-        .select("kakao_place_id, theme_id")
-        .in("kakao_place_id", placeIds);
-      if (error) throw error;
 
-      const map: Record<string, string[]> = {};
-      for (const row of data || []) {
-        if (!map[row.kakao_place_id]) map[row.kakao_place_id] = [];
-        map[row.kakao_place_id].push(row.theme_id);
-      }
-      return map;
+      const res = await fetch(
+        `/api/bar-themes?placeIds=${encodeURIComponent(placeIds.join(","))}`
+      );
+      if (!res.ok) throw new Error(`bar-themes fetch failed: ${res.status}`);
+      return (await res.json()) as Record<string, string[]>;
     },
     enabled: placeIds.length > 0,
     staleTime: 60 * 1000,
@@ -58,52 +48,13 @@ export function useThemeFilteredBars(themeId: string | null, districtName: strin
     queryFn: async () => {
       if (!themeId || !districtName) return { places: [], themeMap: {} };
 
-      // Parallel: fetch theme place IDs + district ID
-      const location = districtName.split("/")[0]?.trim();
-
-      const [themeResult, districtResult] = await Promise.all([
-        supabase
-          .from("bar_themes")
-          .select("kakao_place_id")
-          .eq("theme_id", themeId),
-        supabase
-          .from("districts")
-          .select("id")
-          .ilike("name", `%${location}%`)
-          .limit(1),
-      ]);
-
-      if (themeResult.error) throw themeResult.error;
-
-      const placeIds = (themeResult.data || []).map((e) => e.kakao_place_id);
-      if (placeIds.length === 0) return { places: [], themeMap: {} };
-
-      const districtId = districtResult.data?.[0]?.id;
-
-      // Fetch cached places matching theme place IDs in this district
-      let query = supabase
-        .from("cached_places")
-        .select("kakao_place_id, place_data")
-        .in("kakao_place_id", placeIds);
-
-      if (districtId) {
-        query = query.eq("district_id", districtId);
-      }
-
-      const { data: cached, error: cErr } = await query;
-      if (cErr) throw cErr;
-
-      const places: KakaoPlace[] = (cached || []).map(
-        (c) => c.place_data as unknown as KakaoPlace
+      const res = await fetch(
+        `/api/theme-filtered-bars?themeId=${encodeURIComponent(
+          themeId
+        )}&districtName=${encodeURIComponent(districtName)}`
       );
-
-      const themeMap: Record<string, string[]> = {};
-      for (const id of placeIds) {
-        if (!themeMap[id]) themeMap[id] = [];
-        themeMap[id].push(themeId);
-      }
-
-      return { places, themeMap };
+      if (!res.ok) throw new Error(`theme-filtered-bars fetch failed: ${res.status}`);
+      return (await res.json()) as { places: KakaoPlace[]; themeMap: Record<string, string[]> };
     },
     enabled: !!themeId,
     staleTime: 60 * 1000,

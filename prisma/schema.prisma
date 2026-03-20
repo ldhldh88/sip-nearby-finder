@@ -1,0 +1,95 @@
+// Prisma schema for the app's Supabase Postgres database.
+// Note: We model only the tables needed for the current UI/data flows.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model BarMeta {
+  kakao_place_id String  @id @db.Text
+  view_count     Int     @default(0)
+  like_count     Int     @default(0)
+  bookmark_count Int     @default(0)
+  // Supabase stores this as NUMERIC; UI consumes it as a JS number.
+  hot_score      Float   @default(0)
+  created_at     DateTime @default(now())
+  updated_at     DateTime @default(now())
+
+  barThemes BarTheme[]
+
+  @@index([kakao_place_id])
+  @@map("bar_meta")
+}
+
+model Theme {
+  id        String   @id @default(uuid()) @db.Uuid
+  name      String   @unique
+  icon_url  String?
+  created_at DateTime @default(now())
+
+  barThemes BarTheme[]
+
+  @@map("themes")
+}
+
+model BarTheme {
+  id             String   @id @default(uuid()) @db.Uuid
+  kakao_place_id String   @db.Text
+  theme_id       String   @db.Uuid
+  user_id        String   @db.Uuid
+  created_at     DateTime @default(now())
+
+  kakaoPlace BarMeta @relation(fields: [kakao_place_id], references: [kakao_place_id], onDelete: Cascade)
+  theme      Theme   @relation(fields: [theme_id], references: [id], onDelete: Cascade)
+
+  @@unique([kakao_place_id, theme_id, user_id])
+  @@index([theme_id])
+  @@map("bar_themes")
+}
+
+model Province {
+  id         String   @id @default(uuid()) @db.Uuid
+  name       String   @unique
+  sort_order Int      @default(0)
+  created_at DateTime @default(now())
+
+  districts District[]
+
+  @@map("provinces")
+}
+
+model District {
+  id                 String   @id @default(uuid()) @db.Uuid
+  province_id        String   @db.Uuid
+  name               String
+  sort_order         Int      @default(0)
+  created_at         DateTime @default(now())
+  sync_interval_days Int?
+  last_synced_at     DateTime?
+
+  province     Province @relation(fields: [province_id], references: [id], onDelete: Cascade)
+  cachedPlaces CachedPlace[]
+
+  @@unique([province_id, name])
+  @@index([province_id])
+  @@map("districts")
+}
+
+model CachedPlace {
+  id             String   @id @default(uuid()) @db.Uuid
+  district_id   String   @db.Uuid
+  kakao_place_id String  @db.Text
+  place_data    Json
+  created_at    DateTime @default(now())
+  updated_at    DateTime @default(now())
+
+  district District @relation(fields: [district_id], references: [id], onDelete: Cascade)
+
+  @@unique([district_id, kakao_place_id])
+  @@index([district_id])
+  @@map("cached_places")
+}

@@ -1,24 +1,13 @@
-import { useLocation } from "react-router-dom";
-import { useEffect } from "react";
-
-const NotFound = () => {
-  const location = useLocation();
-
-  useEffect(() => {
-    console.error("404 Error: User attempted to access non-existent route:", location.pathname);
-  }, [location.pathname]);
-
+export default function NotFound() {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-muted">
-      <div className="text-center">
-        <h1 className="mb-4 text-4xl font-bold">404</h1>
-        <p className="mb-4 text-xl text-muted-foreground">Oops! Page not found</p>
+    <div className="flex min-h-screen items-center justify-center bg-muted p-4">
+      <div className="text-center max-w-md">
+        <h1 className="mb-3 text-4xl font-bold">404</h1>
+        <p className="mb-5 text-xl text-muted-foreground">페이지를 찾을 수 없어요.</p>
         <a href="/" className="text-primary underline hover:text-primary/90">
-          Return to Home
+          홈으로 돌아가기
         </a>
       </div>
     </div>
   );
-};
-
-export default NotFound;
+}

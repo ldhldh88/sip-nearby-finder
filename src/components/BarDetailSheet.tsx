@@ -10,7 +10,6 @@ import { usePlacePhoto } from "@/hooks/usePlacePhoto";
 import { useBarMeta } from "@/hooks/useBarLikeCounts";
 import { usePlaceDistricts } from "@/hooks/usePlaceDistricts";
 import { useRegionsRaw } from "@/hooks/useRegions";
-import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
 
@@ -82,14 +81,19 @@ function DistrictAssigner({ place }: { place: KakaoPlace }) {
     if (!selectedDistrictId) return;
     setIsSaving(true);
     try {
-      const { error } = await supabase.functions.invoke("add-place-to-cache", {
-        body: {
+      const res = await fetch("/api/cached-places", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
           district_id: selectedDistrictId,
           kakao_place_id: place.id,
           place_data: place,
-        },
+        }),
       });
-      if (error) throw error;
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(typeof data.error === "string" ? data.error : `HTTP ${res.status}`);
+      }
 
       toast.success("동네에 등록되었어요!");
       queryClient.invalidateQueries({ queryKey: ["place-districts"] });

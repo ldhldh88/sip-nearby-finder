@@ -1,0 +1,12 @@
+{
+  "/api/bar-meta/route": "app/api/bar-meta/route.js",
+  "/api/bar-themes/route": "app/api/bar-themes/route.js",
+  "/api/cached-places/route": "app/api/cached-places/route.js",
+  "/api/district-bars/route": "app/api/district-bars/route.js",
+  "/api/kakao-place-photo/route": "app/api/kakao-place-photo/route.js",
+  "/api/kakao-search/route": "app/api/kakao-search/route.js",
+  "/api/place-districts/route": "app/api/place-districts/route.js",
+  "/api/regions/route": "app/api/regions/route.js",
+  "/api/themes/route": "app/api/themes/route.js",
+  "/page": "app/page.js"
+}

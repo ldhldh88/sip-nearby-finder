@@ -1,0 +1,8 @@
+{
+  "/Admin": "pages/Admin.js",
+  "/Index": "pages/Index.js",
+  "/NotFound": "pages/NotFound.js",
+  "/_app": "pages/_app.js",
+  "/_document": "pages/_document.js",
+  "/_error": "pages/_error.js"
+}
