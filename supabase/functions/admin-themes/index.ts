@@ -285,18 +285,27 @@ serve(async (req) => {
     }
 
     if (action === 'trigger_sync') {
-      // Manually trigger sync for a specific district
-      const syncUrl = `${Deno.env.get('SUPABASE_URL')}/functions/v1/sync-places`;
-      const syncRes = await fetch(syncUrl, {
+      const appUrl = Deno.env.get('NEXT_PUBLIC_SITE_URL') ?? Deno.env.get('APP_URL');
+      if (!appUrl) {
+        return new Response(JSON.stringify({ error: 'NEXT_PUBLIC_SITE_URL or APP_URL not configured' }), {
+          status: 500,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+      const base = appUrl.replace(/\/$/, '');
+      const syncSecret = Deno.env.get('SYNC_PLACES_SECRET');
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (syncSecret) {
+        headers['x-sync-secret'] = syncSecret;
+      }
+      const syncRes = await fetch(`${base}/api/sync-places`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')}`,
-        },
+        headers,
         body: JSON.stringify({ district_id }),
       });
       const syncData = await syncRes.json();
       return new Response(JSON.stringify(syncData), {
+        status: syncRes.status,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }

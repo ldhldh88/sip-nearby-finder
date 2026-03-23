@@ -1,6 +1,6 @@
 import { useState, useMemo, useCallback, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { ChevronDown, Loader2, RefreshCw } from "lucide-react";
+import { Loader2, MapPin, RefreshCw } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import RegionSelector from "@/components/RegionSelector";
 import BarCard from "@/components/BarCard";
@@ -8,6 +8,7 @@ import SearchBar from "@/components/SearchBar";
 import BarDetailSheet from "@/components/BarDetailSheet";
 import HotBarSection from "@/components/HotBarSection";
 import ThemeFilter from "@/components/ThemeFilter";
+import RegionStrip from "@/components/RegionStrip";
 import KakaoMap from "@/components/KakaoMap";
 import { useDistrictBars } from "@/hooks/useDistrictBars";
 import { usePlacesInBounds } from "@/hooks/usePlacesInBounds";
@@ -76,10 +77,19 @@ const Index = () => {
         return;
       }
 
-      const { error } = await supabase.functions.invoke("sync-places", {
-        body: { district_id: districtId },
+      const syncRes = await fetch("/api/sync-places", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ district_id: districtId }),
       });
-      if (error) throw error;
+      if (!syncRes.ok) {
+        const errBody = await syncRes.json().catch(() => ({}));
+        throw new Error(
+          typeof errBody === "object" && errBody && "error" in errBody
+            ? String((errBody as { error?: string }).error)
+            : `sync failed: ${syncRes.status}`
+        );
+      }
 
       toast.success("동기화 완료! 리스트를 새로고침합니다");
       queryClient.invalidateQueries({ queryKey: ["district-bars"] });
@@ -188,19 +198,37 @@ const Index = () => {
 
   const listBody = (
     <>
+      <div className="mb-8 space-y-8">
+        <SearchBar
+          variant="hero"
+          placeholder="오늘 어떤 분위기로 마실까요?"
+          onSelectPlace={(place) => setDetailPlace(place)}
+        />
+        <ThemeFilter
+          variant="home"
+          selectedThemeId={selectedThemeId}
+          onSelect={setSelectedThemeId}
+        />
+        <RegionStrip
+          selectedProvince={selectedProvince}
+          selectedDistrict={selectedDistrict}
+          onSelectDistrict={(province, district) => handleSelectRegion(province, district)}
+          onOpenSelector={() => setRegionOpen(true)}
+        />
+      </div>
+
       <HotBarSection onSelectPlace={(place) => setDetailPlace(place)} />
-      <ThemeFilter selectedThemeId={selectedThemeId} onSelect={setSelectedThemeId} />
 
       {/* Result count + Sync button */}
       {!isLoading && !selectedThemeId && allPlaces.length > 0 && (
         <div className="mb-4 flex items-center justify-between">
-          <p className="text-sm text-muted-foreground">
-            총 <span className="font-semibold text-foreground">{allPlaces.length.toLocaleString()}</span>개의 술집
+          <p className="text-sm text-neutral-500">
+            총 <span className="font-semibold text-neutral-900">{allPlaces.length.toLocaleString()}</span>개의 술집
           </p>
           <button
             onClick={handleSync}
             disabled={isSyncing}
-            className="flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:opacity-50"
+            className="flex items-center gap-1.5 rounded-full border border-neutral-300 px-3 py-1.5 text-xs font-medium text-neutral-700 transition-colors hover:bg-neutral-100 disabled:opacity-50"
           >
             <RefreshCw className={`h-3.5 w-3.5 ${isSyncing ? "animate-spin" : ""}`} />
             {isSyncing ? "동기화 중…" : "데이터 갱신"}
@@ -208,24 +236,24 @@ const Index = () => {
         </div>
       )}
       {selectedThemeId && themeFilterData && (
-        <p className="mb-4 text-sm text-muted-foreground">
-          테마 필터 결과 <span className="font-semibold text-foreground">{filteredPlaces.length}</span>개의 술집
+        <p className="mb-4 text-sm text-neutral-500">
+          테마 필터 결과 <span className="font-semibold text-neutral-900">{filteredPlaces.length}</span>개의 술집
         </p>
       )}
 
       {/* Loading */}
       {isLoading && (
         <div className="flex flex-col items-center justify-center py-20">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
-          <p className="mt-3 text-sm text-muted-foreground">술집을 찾고 있어요…</p>
+          <Loader2 className="h-8 w-8 animate-spin text-neutral-900" />
+          <p className="mt-3 text-sm text-neutral-500">술집을 찾고 있어요…</p>
         </div>
       )}
 
       {/* Error */}
       {isError && (
         <div className="py-20 text-center">
-          <p className="text-lg font-medium text-destructive">데이터를 불러오지 못했어요</p>
-          <p className="mt-1 text-sm text-muted-foreground">잠시 후 다시 시도해 주세요</p>
+          <p className="text-lg font-medium text-neutral-900">데이터를 불러오지 못했어요</p>
+          <p className="mt-1 text-sm text-neutral-500">잠시 후 다시 시도해 주세요</p>
         </div>
       )}
 
@@ -249,31 +277,25 @@ const Index = () => {
             ))
           ) : (
             <div className="py-20 text-center">
-              <p className="text-lg font-medium text-muted-foreground">
-                이 지역의 술집 정보를 찾지 못했어요
-              </p>
-              <p className="mt-1 text-sm text-muted-foreground/70">
-                다른 지역을 선택해 보세요
-              </p>
+              <p className="text-lg font-medium text-neutral-600">이 지역의 술집 정보를 찾지 못했어요</p>
+              <p className="mt-1 text-sm text-neutral-500">다른 지역을 선택해 보세요</p>
             </div>
           )}
         </div>
       )}
 
       {!isLoading && allPlaces.length > 0 && (
-        <p className="py-8 text-center text-sm text-muted-foreground">
-          모든 술집을 불러왔어요 🍻
-        </p>
+        <p className="py-8 text-center text-sm text-neutral-500">모든 술집을 불러왔어요</p>
       )}
     </>
   );
 
   return (
-    <div className="flex min-h-screen flex-col bg-background">
+    <div className="flex min-h-screen flex-col bg-white text-neutral-900">
       {/* Sticky Header */}
-      <header className="sticky top-0 z-10 h-14 border-b border-border backdrop-blur-md bg-background/80">
-        <div className="mx-auto flex h-full max-w-3xl items-center justify-between px-4">
-          <div className="flex items-center gap-2.5">
+      <header className="sticky top-0 z-10 h-14 border-b border-neutral-200 bg-white/95 backdrop-blur-sm">
+        <div className="mx-auto flex h-full max-w-3xl items-center justify-between gap-3 px-4">
+          <div className="flex min-w-0 items-center gap-2.5">
             <img
               src="/logo.svg"
               alt=""
@@ -282,21 +304,28 @@ const Index = () => {
               className="h-7 w-7 shrink-0"
               aria-hidden
             />
-            <span className="text-lg font-semibold leading-none tracking-[-0.02em] text-foreground">
+            <span className="truncate text-lg font-semibold leading-none tracking-[-0.02em] text-neutral-900">
               FirePlace
+            </span>
+            <span className="hidden shrink-0 border border-neutral-300 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-neutral-600 sm:inline">
+              Beta
             </span>
           </div>
 
-          <div className="flex items-center gap-2">
-            <SearchBar onSelectPlace={(place) => setDetailPlace(place)} />
-
-            <button
-              onClick={() => setRegionOpen(true)}
-              className="flex items-center gap-1.5 rounded-full bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-transform active:scale-95 hover:scale-105"
-              style={{ boxShadow: "var(--shadow-primary)" }}
+          <div className="flex min-w-0 items-center gap-2">
+            <p
+              className="hidden max-w-[min(12rem,40vw)] truncate text-right text-xs text-neutral-500 sm:block"
+              title={regionLabel}
             >
-              {regionLabel.length > 12 ? regionLabel.slice(0, 12) + "…" : regionLabel}
-              <ChevronDown className="h-4 w-4" />
+              {regionLabel}
+            </p>
+            <button
+              type="button"
+              onClick={() => setRegionOpen(true)}
+              className="flex shrink-0 items-center justify-center rounded-full border border-neutral-300 p-2.5 text-neutral-900 transition-colors hover:bg-neutral-100"
+              aria-label="지역 선택"
+            >
+              <MapPin className="h-5 w-5" />
             </button>
           </div>
         </div>
@@ -330,7 +359,7 @@ const Index = () => {
             />
             {filteredPlaces.length === 0 && (
               <div className="pointer-events-none absolute inset-x-0 top-4 flex justify-center px-4">
-                <div className="max-w-sm rounded-xl border border-border bg-background/95 px-4 py-3 text-center text-sm text-muted-foreground shadow-md backdrop-blur-sm">
+                <div className="max-w-sm border border-neutral-200 bg-white/95 px-4 py-3 text-center text-sm text-neutral-600 backdrop-blur-sm">
                   이 지역에 표시할 술집이 없어요
                 </div>
               </div>
@@ -340,7 +369,7 @@ const Index = () => {
               viewMode === "map" &&
               mapViewportBounds !== null && (
                 <div className="pointer-events-none absolute inset-x-0 top-4 flex justify-center px-4">
-                  <div className="max-w-sm rounded-xl border border-border bg-background/95 px-4 py-3 text-center text-sm text-muted-foreground shadow-md backdrop-blur-sm">
+                  <div className="max-w-sm border border-neutral-200 bg-white/95 px-4 py-3 text-center text-sm text-neutral-600 backdrop-blur-sm">
                     이 화면 범위에 술집이 없어요 · 지도를 움직여 보세요
                   </div>
                 </div>
@@ -350,16 +379,16 @@ const Index = () => {
       )}
 
       {viewMode === "map" && isLoading && (
-        <div className="fixed inset-x-0 bottom-0 top-14 z-[20] flex flex-col items-center justify-center bg-background">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
-          <p className="mt-3 text-sm text-muted-foreground">술집을 찾고 있어요…</p>
+        <div className="fixed inset-x-0 bottom-0 top-14 z-[20] flex flex-col items-center justify-center bg-white">
+          <Loader2 className="h-8 w-8 animate-spin text-neutral-900" />
+          <p className="mt-3 text-sm text-neutral-500">술집을 찾고 있어요…</p>
         </div>
       )}
 
       {viewMode === "map" && isError && (
-        <div className="fixed inset-x-0 bottom-0 top-14 z-[20] flex flex-col items-center justify-center bg-background px-4 text-center">
-          <p className="text-lg font-medium text-destructive">데이터를 불러오지 못했어요</p>
-          <p className="mt-1 text-sm text-muted-foreground">잠시 후 다시 시도해 주세요</p>
+        <div className="fixed inset-x-0 bottom-0 top-14 z-[20] flex flex-col items-center justify-center bg-white px-4 text-center">
+          <p className="text-lg font-medium text-neutral-900">데이터를 불러오지 못했어요</p>
+          <p className="mt-1 text-sm text-neutral-500">잠시 후 다시 시도해 주세요</p>
         </div>
       )}
 
@@ -367,7 +396,7 @@ const Index = () => {
         className={cn(
           "mx-auto flex w-full max-w-3xl flex-1 flex-col min-h-0",
           viewMode === "list"
-            ? "relative z-10 bg-background px-4 pt-5 pb-[calc(7rem+env(safe-area-inset-bottom,0px))]"
+            ? "relative z-10 bg-white px-4 pt-5 pb-[calc(7rem+env(safe-area-inset-bottom,0px))]"
             : "relative z-0 max-w-none min-h-0 p-0"
         )}
       >
@@ -382,7 +411,7 @@ const Index = () => {
       </main>
 
       {viewMode === "list" && (
-        <div className="relative z-10 bg-background">
+        <div className="relative z-10 bg-white">
           <Footer />
         </div>
       )}

@@ -1,34 +1,12 @@
 import { prisma } from "@/lib/prisma";
-import { fetchKakaoKeywordSearch, getKakaoRestApiKey } from "@/lib/kakao-rest";
-
-interface KakaoPlace {
-  id: string;
-  place_name: string;
-  category_name: string;
-  category_group_code: string;
-  phone: string;
-  address_name: string;
-  road_address_name: string;
-  x: string;
-  y: string;
-  place_url: string;
-  distance: string;
-}
-
-interface SearchResult {
-  places: KakaoPlace[];
-  isEnd: boolean;
-  total: number;
-  pageableCount: number;
-  currentPage: number;
-  totalPages: number;
-}
+import { kakaoService } from "@/lib/kakao/kakao.service";
+import type { DistrictSearchResult, KakaoKeywordSearchData, KakaoPlace } from "@/lib/kakao/types";
 
 export async function GET(req: Request) {
   const url = new URL(req.url);
   const mode = url.searchParams.get("mode");
 
-  /** 검색창 이름 검색 — Kakao 키워드 API 직접 호출 (구 kakao-proxy simple) */
+  /** 검색창 이름 검색 — Kakao 키워드 API 직접 호출 */
   if (mode === "simple") {
     const query = url.searchParams.get("query") ?? "";
     if (!query.trim()) {
@@ -37,7 +15,7 @@ export async function GET(req: Request) {
         meta: { total_count: 0, pageable_count: 0, is_end: true },
       });
     }
-    if (!getKakaoRestApiKey()) {
+    if (!kakaoService.getRestApiKey()) {
       return Response.json(
         { error: "KAKAO_REST_API_KEY not configured" },
         { status: 500 }
@@ -47,7 +25,7 @@ export async function GET(req: Request) {
     const size = url.searchParams.get("size") ?? "15";
     const sort = url.searchParams.get("sort") ?? "accuracy";
     const params = new URLSearchParams({ query, page, size, sort });
-    const result = await fetchKakaoKeywordSearch(params);
+    const result = await kakaoService.fetchKeywordSearch(params);
     return Response.json(result.data, { status: result.ok ? 200 : result.status });
   }
 
@@ -64,10 +42,9 @@ export async function GET(req: Request) {
       pageableCount: 0,
       currentPage: page,
       totalPages: 0,
-    } satisfies SearchResult);
+    } satisfies DistrictSearchResult);
   }
 
-  // 1) Try cached DB first
   const matched = await prisma.district.findFirst({
     where: {
       name: {
@@ -98,12 +75,11 @@ export async function GET(req: Request) {
         pageableCount: totalCount,
         currentPage: page,
         totalPages,
-      } satisfies SearchResult);
+      } satisfies DistrictSearchResult);
     }
   }
 
-  // 2) Fallback: Kakao 키워드 API 직접 호출
-  if (!getKakaoRestApiKey()) {
+  if (!kakaoService.getRestApiKey()) {
     return Response.json(
       { error: "KAKAO_REST_API_KEY not configured" },
       { status: 500 }
@@ -118,7 +94,7 @@ export async function GET(req: Request) {
     sort: "accuracy",
   });
 
-  const result = await fetchKakaoKeywordSearch(params);
+  const result = await kakaoService.fetchKeywordSearch(params);
 
   if (!result.ok) {
     return Response.json(
@@ -127,14 +103,7 @@ export async function GET(req: Request) {
     );
   }
 
-  const data = result.data as {
-    documents?: KakaoPlace[];
-    meta?: {
-      total_count?: number;
-      pageable_count?: number;
-      is_end?: boolean;
-    };
-  };
+  const data = result.data as KakaoKeywordSearchData;
 
   const totalCount = data.meta?.total_count ?? 0;
   const pageableCount = data.meta?.pageable_count ?? 0;
@@ -147,6 +116,5 @@ export async function GET(req: Request) {
     pageableCount,
     currentPage: page,
     totalPages,
-  } satisfies SearchResult);
+  } satisfies DistrictSearchResult);
 }
-

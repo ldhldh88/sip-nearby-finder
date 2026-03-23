@@ -3,18 +3,31 @@
 import { useState, useRef, useEffect, useMemo } from "react";
 import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { Search, X, Loader2, MapPin } from "lucide-react";
+import { Search, X, Loader2, MapPin, Plus } from "lucide-react";
 import { useBarSearch } from "@/hooks/useBarSearch";
 import { KakaoPlace } from "@/lib/kakao";
 import { getShortCategory, getCategoryColor } from "@/hooks/useKakaoSearch";
 import PlaceThumbnail from "@/components/PlaceThumbnail";
 import { usePlaceDistricts } from "@/hooks/usePlaceDistricts";
+import { cn } from "@/lib/utils";
+
+export type SearchBarVariant = "icon" | "hero";
 
 interface SearchBarProps {
   onSelectPlace: (place: KakaoPlace) => void;
+  /** icon: 헤더용 돋보기 버튼 · hero: 메인 화면 필 형태 */
+  variant?: SearchBarVariant;
+  /** variant="hero"일 때 보이는 플레이스홀더 문구 */
+  placeholder?: string;
+  className?: string;
 }
 
-const SearchBar = ({ onSelectPlace }: SearchBarProps) => {
+const SearchBar = ({
+  onSelectPlace,
+  variant = "icon",
+  placeholder = "오늘 어떤 분위기로 마실까요?",
+  className,
+}: SearchBarProps) => {
   const [open, setOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [query, setQuery] = useState("");
@@ -165,16 +178,41 @@ const SearchBar = ({ onSelectPlace }: SearchBarProps) => {
       document.body
     );
 
-  return (
-    <>
+  const trigger =
+    variant === "hero" ? (
       <button
+        type="button"
         onClick={() => setOpen(true)}
-        className="rounded-full p-2 transition-colors hover:bg-muted"
+        className={cn(
+          "group flex w-full min-h-[48px] items-center gap-3 rounded-full border border-neutral-300 bg-neutral-50 pl-5 pr-1.5 py-1.5 text-left transition hover:border-neutral-400",
+          className
+        )}
+        aria-label="술집 검색"
+      >
+        <span className="pointer-events-none flex-1 truncate text-[15px] text-neutral-400">
+          {placeholder}
+        </span>
+        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-neutral-900 text-white transition group-active:scale-[0.98]">
+          <Plus className="h-5 w-5" strokeWidth={2.25} aria-hidden />
+        </span>
+      </button>
+    ) : (
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        className={cn(
+          "rounded-full p-2 text-neutral-900 transition-colors hover:bg-neutral-100",
+          className
+        )}
         aria-label="검색"
       >
-        <Search className="h-5 w-5 text-foreground" />
+        <Search className="h-5 w-5" />
       </button>
+    );
 
+  return (
+    <>
+      {trigger}
       {overlay}
     </>
   );

@@ -1,18 +1,5 @@
 import { prisma } from "@/lib/prisma";
-
-interface KakaoPlace {
-  id: string;
-  place_name: string;
-  category_name: string;
-  category_group_code: string;
-  phone: string;
-  address_name: string;
-  road_address_name: string;
-  x: string;
-  y: string;
-  place_url: string;
-  distance: string;
-}
+import type { KakaoPlace } from "@/lib/kakao/types";
 
 interface BarMeta {
   like_count: number;
