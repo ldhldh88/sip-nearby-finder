@@ -1,4 +1,5 @@
 import Link from "next/link";
+import DarkModeToggle from "@/components/DarkModeToggle";
 
 type LegalPageShellProps = {
   title: string;
@@ -13,7 +14,10 @@ export default function LegalPageShell({ title, children }: LegalPageShellProps)
           <Link href="/" className="text-sm font-semibold text-foreground transition-colors hover:text-primary">
             ← 홈
           </Link>
-          <span className="text-xs text-muted-foreground">{title}</span>
+          <div className="flex min-w-0 items-center gap-2">
+            <span className="max-w-[60vw] truncate text-xs text-muted-foreground">{title}</span>
+            <DarkModeToggle />
+          </div>
         </div>
       </header>
       <main className="mx-auto max-w-3xl px-4 py-10 pb-16 text-sm leading-relaxed text-foreground">

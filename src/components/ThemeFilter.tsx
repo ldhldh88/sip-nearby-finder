@@ -23,7 +23,7 @@ const ThemeFilter = ({
   if (variant === "home") {
     return (
       <section className={cn("space-y-3", className)}>
-        <h3 className="text-sm font-semibold tracking-tight text-neutral-900">분위기</h3>
+        <h3 className="text-sm font-semibold tracking-tight text-foreground">분위기</h3>
         <div className="flex flex-wrap gap-2">
           <button
             type="button"
@@ -31,8 +31,8 @@ const ThemeFilter = ({
             className={cn(
               "inline-flex items-center gap-2 rounded-full border px-3.5 py-2 text-sm font-medium transition-colors",
               selectedThemeId === null
-                ? "border-neutral-900 bg-neutral-900 text-white"
-                : "border-neutral-300 bg-white text-neutral-900 hover:border-neutral-400"
+                ? "border-foreground bg-foreground text-background"
+                : "border-border bg-background text-foreground hover:bg-muted/50"
             )}
           >
             <LayoutGrid className="h-4 w-4 shrink-0" strokeWidth={1.75} />
@@ -100,8 +100,8 @@ function ThemeChipHome({
       className={cn(
         "inline-flex max-w-full min-w-0 items-center gap-2 rounded-full border px-3.5 py-2 text-sm font-medium transition-colors",
         selected
-          ? "border-neutral-900 bg-neutral-900 text-white"
-          : "border-neutral-300 bg-white text-neutral-900 hover:border-neutral-400"
+            ? "border-foreground bg-foreground text-background"
+            : "border-border bg-background text-foreground hover:bg-muted/50"
       )}
     >
       {theme.icon_url ? (

@@ -14,6 +14,9 @@ const LikeButton = ({ kakaoPlaceId, initialCount = 0 }: LikeButtonProps) => {
     <button
       type="button"
       onClick={(e) => {
+        // `LikeButton` can be rendered inside clickable containers (e.g. a Next `Link`),
+        // so prevent the parent navigation.
+        e.preventDefault();
         e.stopPropagation();
         like();
       }}

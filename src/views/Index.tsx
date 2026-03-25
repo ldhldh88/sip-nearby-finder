@@ -1,24 +1,27 @@
-import { useState, useMemo, useCallback, useEffect } from "react";
+import { useState, useMemo, useCallback, useEffect, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Loader2, MapPin, RefreshCw } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import RegionSelector from "@/components/RegionSelector";
-import BarCard from "@/components/BarCard";
+import BarListItem from "@/components/BarListItem";
 import SearchBar from "@/components/SearchBar";
 import BarDetailSheet from "@/components/BarDetailSheet";
 import HotBarSection from "@/components/HotBarSection";
 import ThemeFilter from "@/components/ThemeFilter";
 import RegionStrip from "@/components/RegionStrip";
 import KakaoMap from "@/components/KakaoMap";
-import { useDistrictBars } from "@/hooks/useDistrictBars";
+import { useInfiniteDistrictBars } from "@/hooks/useInfiniteDistrictBars";
 import { usePlacesInBounds } from "@/hooks/usePlacesInBounds";
-import { useThemes, useBarThemes, useThemeFilteredBars } from "@/hooks/useThemes";
+import { useInfiniteThemeFilteredBars } from "@/hooks/useInfiniteThemeFilteredBars";
+import { useThemes, useBarThemes } from "@/hooks/useThemes";
+import { useBarMeta } from "@/hooks/useBarLikeCounts";
 import { KakaoPlace } from "@/lib/kakao";
 import { supabase } from "@/integrations/supabase/client";
 import Footer from "@/components/Footer";
 import ViewModeFab from "@/components/ViewModeFab";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import DarkModeToggle from "@/components/DarkModeToggle";
 import {
   filterPlacesByViewport,
   type MapViewportBounds,
@@ -43,14 +46,32 @@ const Index = () => {
   const selectedProvince = searchParams.get("province") || "서울";
   const selectedDistrict = searchParams.get("district") || "강남/역삼/삼성/논현";
 
-  const {
-    data: districtData,
-    isLoading,
-    isError,
-  } = useDistrictBars(selectedDistrict);
+  const PAGE_SIZE = 5;
 
-  const allPlaces = districtData?.places ?? [];
-  const barMetaMap = districtData?.metaMap ?? {};
+  const districtBarsQuery = useInfiniteDistrictBars(
+    selectedThemeId ? null : selectedDistrict,
+    PAGE_SIZE
+  );
+  const themeBarsQuery = useInfiniteThemeFilteredBars(
+    selectedThemeId,
+    selectedDistrict,
+    PAGE_SIZE
+  );
+
+  const filteredPlaces = selectedThemeId
+    ? themeBarsQuery.places
+    : districtBarsQuery.places;
+  const totalCount = selectedThemeId ? themeBarsQuery.total : districtBarsQuery.total;
+  const isLoading = selectedThemeId ? themeBarsQuery.isLoading : districtBarsQuery.isLoading;
+  const isError = selectedThemeId ? themeBarsQuery.isError : districtBarsQuery.isError;
+
+  const hasNextPage = selectedThemeId ? themeBarsQuery.hasNextPage : districtBarsQuery.hasNextPage;
+  const fetchNextPage = selectedThemeId
+    ? themeBarsQuery.fetchNextPage
+    : districtBarsQuery.fetchNextPage;
+  const isFetchingNextPage = selectedThemeId
+    ? themeBarsQuery.isFetchingNextPage
+    : districtBarsQuery.isFetchingNextPage;
 
   const handleSelectRegion = (province: string, district: string | null) => {
     const params = new URLSearchParams(searchParams.toString());
@@ -109,14 +130,8 @@ const Index = () => {
 
   // Fetch themes data
   const { data: allThemes } = useThemes();
-  const placeIds = useMemo(() => allPlaces.map((p) => p.id), [allPlaces]);
+  const placeIds = useMemo(() => filteredPlaces.map((p) => p.id), [filteredPlaces]);
   const { data: barThemesMap } = useBarThemes(placeIds);
-
-  // DB-level theme filtering
-  const { data: themeFilterData } = useThemeFilteredBars(
-    selectedThemeId,
-    selectedDistrict
-  );
 
   const themeLookup = useMemo(() => {
     const map: Record<string, { id: string; name: string; icon_url: string | null }> = {};
@@ -124,11 +139,13 @@ const Index = () => {
     return map;
   }, [allThemes]);
 
+  const { data: barMetaMap } = useBarMeta(placeIds);
+
   // Merge theme maps
   const mergedThemesMap = useMemo(() => {
     const merged = { ...barThemesMap };
-    if (themeFilterData?.themeMap) {
-      for (const [id, themes] of Object.entries(themeFilterData.themeMap)) {
+    if (selectedThemeId) {
+      for (const [id, themes] of Object.entries(themeBarsQuery.themeMap ?? {})) {
         if (!merged[id]) merged[id] = [];
         for (const t of themes) {
           if (!merged[id].includes(t)) merged[id].push(t);
@@ -136,13 +153,7 @@ const Index = () => {
       }
     }
     return merged;
-  }, [barThemesMap, themeFilterData]);
-
-  // When theme is selected, show DB-queried results; otherwise show all (already sorted by DB)
-  const filteredPlaces = useMemo(() => {
-    if (selectedThemeId) return themeFilterData?.places ?? [];
-    return allPlaces;
-  }, [allPlaces, selectedThemeId, themeFilterData]);
+  }, [barThemesMap, selectedThemeId, themeBarsQuery.themeMap]);
 
   useEffect(() => {
     setMapViewportBounds(null);
@@ -196,6 +207,27 @@ const Index = () => {
     mapPlacesForViewport,
   ]);
 
+  const sentinelRef = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    if (viewMode !== "list") return;
+    if (!sentinelRef.current) return;
+    if (!hasNextPage) return;
+
+    const el = sentinelRef.current;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const first = entries[0];
+        if (first?.isIntersecting && hasNextPage && !isFetchingNextPage) {
+          fetchNextPage();
+        }
+      },
+      { rootMargin: "200px" }
+    );
+
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [viewMode, hasNextPage, isFetchingNextPage, fetchNextPage]);
+
   const listBody = (
     <>
       <div className="mb-8 space-y-8">
@@ -220,54 +252,62 @@ const Index = () => {
       <HotBarSection onSelectPlace={(place) => setDetailPlace(place)} />
 
       {/* Result count + Sync button */}
-      {!isLoading && !selectedThemeId && allPlaces.length > 0 && (
+      {!isLoading && !selectedThemeId && totalCount > 0 && (
         <div className="mb-4 flex items-center justify-between">
-          <p className="text-sm text-neutral-500">
-            총 <span className="font-semibold text-neutral-900">{allPlaces.length.toLocaleString()}</span>개의 술집
+          <p className="text-sm text-muted-foreground">
+            총{" "}
+            <span className="font-semibold text-foreground">
+              {totalCount.toLocaleString()}
+            </span>
+            개의 술집
           </p>
           <button
             onClick={handleSync}
             disabled={isSyncing}
-            className="flex items-center gap-1.5 rounded-full border border-neutral-300 px-3 py-1.5 text-xs font-medium text-neutral-700 transition-colors hover:bg-neutral-100 disabled:opacity-50"
+            className="flex items-center gap-1.5 rounded-full border border-border px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-muted/50 disabled:opacity-50"
           >
             <RefreshCw className={`h-3.5 w-3.5 ${isSyncing ? "animate-spin" : ""}`} />
             {isSyncing ? "동기화 중…" : "데이터 갱신"}
           </button>
         </div>
       )}
-      {selectedThemeId && themeFilterData && (
-        <p className="mb-4 text-sm text-neutral-500">
-          테마 필터 결과 <span className="font-semibold text-neutral-900">{filteredPlaces.length}</span>개의 술집
+      {selectedThemeId && !isLoading && totalCount > 0 && (
+        <p className="mb-4 text-sm text-muted-foreground">
+          테마 필터 결과{" "}
+          <span className="font-semibold text-foreground">
+            {totalCount.toLocaleString()}
+          </span>
+          개의 술집
         </p>
       )}
 
       {/* Loading */}
       {isLoading && (
         <div className="flex flex-col items-center justify-center py-20">
-          <Loader2 className="h-8 w-8 animate-spin text-neutral-900" />
-          <p className="mt-3 text-sm text-neutral-500">술집을 찾고 있어요…</p>
+          <Loader2 className="h-8 w-8 animate-spin text-foreground" />
+          <p className="mt-3 text-sm text-muted-foreground">술집을 찾고 있어요…</p>
         </div>
       )}
 
       {/* Error */}
       {isError && (
         <div className="py-20 text-center">
-          <p className="text-lg font-medium text-neutral-900">데이터를 불러오지 못했어요</p>
-          <p className="mt-1 text-sm text-neutral-500">잠시 후 다시 시도해 주세요</p>
+          <p className="text-lg font-medium text-foreground">데이터를 불러오지 못했어요</p>
+          <p className="mt-1 text-sm text-muted-foreground">잠시 후 다시 시도해 주세요</p>
         </div>
       )}
 
       {/* Bar List */}
       {!isLoading && !isError && (
-        <div className="flex flex-col gap-3">
+        <div className="flex flex-col gap-2.5">
           {filteredPlaces.length > 0 ? (
             filteredPlaces.map((place, i) => (
-              <BarCard
+              <BarListItem
                 key={place.id}
                 place={place}
                 index={i}
                 onClick={() => setDetailPlace(place)}
-                likeCount={barMetaMap[place.id]?.like_count ?? 0}
+                likeCount={barMetaMap?.[place.id]?.like_count ?? 0}
                 themes={
                   mergedThemesMap?.[place.id]
                     ?.map((tid) => themeLookup[tid])
@@ -277,23 +317,35 @@ const Index = () => {
             ))
           ) : (
             <div className="py-20 text-center">
-              <p className="text-lg font-medium text-neutral-600">이 지역의 술집 정보를 찾지 못했어요</p>
-              <p className="mt-1 text-sm text-neutral-500">다른 지역을 선택해 보세요</p>
+              <p className="text-lg font-medium text-muted-foreground">이 지역의 술집 정보를 찾지 못했어요</p>
+              <p className="mt-1 text-sm text-muted-foreground">다른 지역을 선택해 보세요</p>
+            </div>
+          )}
+
+          {hasNextPage && (
+            <div ref={sentinelRef} className="py-6">
+              <div className="flex items-center justify-center">
+                <Loader2
+                  className={`h-5 w-5 animate-spin text-foreground ${
+                    isFetchingNextPage ? "opacity-100" : "opacity-0"
+                  }`}
+                />
+              </div>
             </div>
           )}
         </div>
       )}
 
-      {!isLoading && allPlaces.length > 0 && (
-        <p className="py-8 text-center text-sm text-neutral-500">모든 술집을 불러왔어요</p>
+      {!isLoading && filteredPlaces.length > 0 && !hasNextPage && (
+        <p className="py-8 text-center text-sm text-muted-foreground">모든 술집을 불러왔어요</p>
       )}
     </>
   );
 
   return (
-    <div className="flex min-h-screen flex-col bg-white text-neutral-900">
+    <div className="flex min-h-screen flex-col bg-background text-foreground">
       {/* Sticky Header */}
-      <header className="sticky top-0 z-10 h-14 border-b border-neutral-200 bg-white/95 backdrop-blur-sm">
+      <header className="sticky top-0 z-50 h-14 border-b border-border bg-background/95 backdrop-blur-sm">
         <div className="mx-auto flex h-full max-w-3xl items-center justify-between gap-3 px-4">
           <div className="flex min-w-0 items-center gap-2.5">
             <img
@@ -304,17 +356,17 @@ const Index = () => {
               className="h-7 w-7 shrink-0"
               aria-hidden
             />
-            <span className="truncate text-lg font-semibold leading-none tracking-[-0.02em] text-neutral-900">
+            <span className="truncate text-lg font-semibold leading-none tracking-[-0.02em] text-foreground">
               FirePlace
             </span>
-            <span className="hidden shrink-0 border border-neutral-300 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-neutral-600 sm:inline">
+            <span className="hidden shrink-0 border border-border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground sm:inline">
               Beta
             </span>
           </div>
 
           <div className="flex min-w-0 items-center gap-2">
             <p
-              className="hidden max-w-[min(12rem,40vw)] truncate text-right text-xs text-neutral-500 sm:block"
+              className="hidden max-w-[min(12rem,40vw)] truncate text-right text-xs text-muted-foreground sm:block"
               title={regionLabel}
             >
               {regionLabel}
@@ -322,11 +374,12 @@ const Index = () => {
             <button
               type="button"
               onClick={() => setRegionOpen(true)}
-              className="flex shrink-0 items-center justify-center rounded-full border border-neutral-300 p-2.5 text-neutral-900 transition-colors hover:bg-neutral-100"
+              className="flex shrink-0 items-center justify-center rounded-full border border-border p-2.5 text-foreground transition-colors hover:bg-muted/50"
               aria-label="지역 선택"
             >
               <MapPin className="h-5 w-5" />
             </button>
+            <DarkModeToggle />
           </div>
         </div>
       </header>
@@ -359,7 +412,7 @@ const Index = () => {
             />
             {filteredPlaces.length === 0 && (
               <div className="pointer-events-none absolute inset-x-0 top-4 flex justify-center px-4">
-                <div className="max-w-sm border border-neutral-200 bg-white/95 px-4 py-3 text-center text-sm text-neutral-600 backdrop-blur-sm">
+                <div className="max-w-sm border border-border bg-background/95 px-4 py-3 text-center text-sm text-muted-foreground backdrop-blur-sm">
                   이 지역에 표시할 술집이 없어요
                 </div>
               </div>
@@ -369,7 +422,7 @@ const Index = () => {
               viewMode === "map" &&
               mapViewportBounds !== null && (
                 <div className="pointer-events-none absolute inset-x-0 top-4 flex justify-center px-4">
-                  <div className="max-w-sm border border-neutral-200 bg-white/95 px-4 py-3 text-center text-sm text-neutral-600 backdrop-blur-sm">
+                  <div className="max-w-sm border border-border bg-background/95 px-4 py-3 text-center text-sm text-muted-foreground backdrop-blur-sm">
                     이 화면 범위에 술집이 없어요 · 지도를 움직여 보세요
                   </div>
                 </div>
@@ -379,16 +432,16 @@ const Index = () => {
       )}
 
       {viewMode === "map" && isLoading && (
-        <div className="fixed inset-x-0 bottom-0 top-14 z-[20] flex flex-col items-center justify-center bg-white">
-          <Loader2 className="h-8 w-8 animate-spin text-neutral-900" />
-          <p className="mt-3 text-sm text-neutral-500">술집을 찾고 있어요…</p>
+        <div className="fixed inset-x-0 bottom-0 top-14 z-[20] flex flex-col items-center justify-center bg-background">
+          <Loader2 className="h-8 w-8 animate-spin text-foreground" />
+          <p className="mt-3 text-sm text-muted-foreground">술집을 찾고 있어요…</p>
         </div>
       )}
 
       {viewMode === "map" && isError && (
-        <div className="fixed inset-x-0 bottom-0 top-14 z-[20] flex flex-col items-center justify-center bg-white px-4 text-center">
-          <p className="text-lg font-medium text-neutral-900">데이터를 불러오지 못했어요</p>
-          <p className="mt-1 text-sm text-neutral-500">잠시 후 다시 시도해 주세요</p>
+        <div className="fixed inset-x-0 bottom-0 top-14 z-[20] flex flex-col items-center justify-center bg-background px-4 text-center">
+          <p className="text-lg font-medium text-foreground">데이터를 불러오지 못했어요</p>
+          <p className="mt-1 text-sm text-muted-foreground">잠시 후 다시 시도해 주세요</p>
         </div>
       )}
 
@@ -396,7 +449,7 @@ const Index = () => {
         className={cn(
           "mx-auto flex w-full max-w-3xl flex-1 flex-col min-h-0",
           viewMode === "list"
-            ? "relative z-10 bg-white px-4 pt-5 pb-[calc(7rem+env(safe-area-inset-bottom,0px))]"
+            ? "relative z-10 bg-background px-4 pt-5 pb-[calc(7rem+env(safe-area-inset-bottom,0px))]"
             : "relative z-0 max-w-none min-h-0 p-0"
         )}
       >
@@ -411,7 +464,7 @@ const Index = () => {
       </main>
 
       {viewMode === "list" && (
-        <div className="relative z-10 bg-white">
+        <div className="relative z-10 bg-background">
           <Footer />
         </div>
       )}

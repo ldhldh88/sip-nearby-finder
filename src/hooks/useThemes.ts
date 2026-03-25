@@ -19,19 +19,24 @@ export function useThemes() {
   });
 }
 
-export function useBarThemes(placeIds: string[]) {
+export function useBarThemes(placeIds: string[], userId?: string | null) {
+  const filterByUser = userId !== undefined;
+  const enabled = placeIds.length > 0 && (!filterByUser || !!userId);
+
   return useQuery({
-    queryKey: ["bar-themes", placeIds],
+    queryKey: ["bar-themes", placeIds, userId ?? null],
     queryFn: async () => {
       if (placeIds.length === 0) return {};
 
-      const res = await fetch(
-        `/api/bar-themes?placeIds=${encodeURIComponent(placeIds.join(","))}`
-      );
+      const params = new URLSearchParams();
+      params.set("placeIds", placeIds.join(","));
+      if (filterByUser && userId) params.set("userId", userId);
+
+      const res = await fetch(`/api/bar-themes?${params.toString()}`);
       if (!res.ok) throw new Error(`bar-themes fetch failed: ${res.status}`);
       return (await res.json()) as Record<string, string[]>;
     },
-    enabled: placeIds.length > 0,
+    enabled,
     staleTime: 60 * 1000,
   });
 }

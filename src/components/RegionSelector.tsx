@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, Search } from "lucide-react";
 import { useRegions } from "@/hooks/useRegions";
@@ -17,6 +17,7 @@ const spring = { type: "spring" as const, stiffness: 400, damping: 30 };
 const RegionSelector = ({ open, onClose, onSelect, selectedProvince, selectedDistrict }: RegionSelectorProps) => {
   const isMobile = useIsMobile();
   const { data: REGIONS } = useRegions();
+  const modalRef = useRef<HTMLDivElement | null>(null);
   const [activeProvince, setActiveProvince] = useState(selectedProvince || "서울");
   const [searchQuery, setSearchQuery] = useState("");
 
@@ -52,8 +53,26 @@ const RegionSelector = ({ open, onClose, onSelect, selectedProvince, selectedDis
     onClose();
   };
 
+  // 데스크탑에서 모달/백드롭 z-index 충돌이 있어도,
+  // "모달 내부"를 제외한 클릭/탭은 항상 닫히도록 처리합니다.
+  useEffect(() => {
+    if (!open) return;
+    const onPointerDownCapture = (e: PointerEvent) => {
+      const el = modalRef.current;
+      if (!el) return;
+      const target = e.target as Node | null;
+      if (!target) return;
+      if (!el.contains(target)) onClose();
+    };
+
+    window.addEventListener("pointerdown", onPointerDownCapture, true);
+    return () => {
+      window.removeEventListener("pointerdown", onPointerDownCapture, true);
+    };
+  }, [open, onClose]);
+
   const modalContent = (
-    <div className="flex h-full flex-col overflow-hidden rounded-2xl">
+    <div ref={modalRef} className="flex h-full flex-col overflow-hidden rounded-2xl">
       {/* Header */}
       <div className="flex items-center gap-3 border-b border-border px-4 py-3">
         <button onClick={onClose} className="rounded-lg p-1 transition-colors hover:bg-muted">
@@ -143,7 +162,7 @@ const RegionSelector = ({ open, onClose, onSelect, selectedProvince, selectedDis
       {open && (
         <>
           <motion.div
-            className="fixed inset-0 z-40 bg-foreground/30"
+            className="fixed inset-0 z-[60] bg-foreground/30"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
@@ -152,7 +171,7 @@ const RegionSelector = ({ open, onClose, onSelect, selectedProvince, selectedDis
 
           {isMobile ? (
             <motion.div
-              className="fixed inset-x-0 bottom-0 z-50 h-[85svh] rounded-t-2xl bg-card shadow-xl"
+              className="fixed inset-x-0 bottom-0 z-[70] h-[85svh] rounded-t-2xl bg-card shadow-xl"
               initial={{ y: "100%" }}
               animate={{ y: 0 }}
               exit={{ y: "100%" }}
@@ -161,7 +180,7 @@ const RegionSelector = ({ open, onClose, onSelect, selectedProvince, selectedDis
               {modalContent}
             </motion.div>
           ) : (
-            <div className="fixed inset-0 z-50 flex items-center justify-center">
+            <div className="fixed inset-0 z-[70] flex items-center justify-center">
               <motion.div
                 className="h-[600px] w-full max-w-2xl rounded-2xl bg-card shadow-xl"
                 initial={{ opacity: 0, scale: 0.95 }}

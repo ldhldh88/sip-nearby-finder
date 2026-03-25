@@ -45,11 +45,11 @@ const RegionStrip = ({
   return (
     <section className={cn("space-y-3", className)}>
       <div className="flex items-end justify-between gap-2">
-        <h3 className="text-sm font-semibold tracking-tight text-neutral-900">지역</h3>
+        <h3 className="text-sm font-semibold tracking-tight text-foreground">지역</h3>
         <button
           type="button"
           onClick={onOpenSelector}
-          className="flex shrink-0 items-center gap-0.5 text-xs font-medium text-neutral-500 transition-colors hover:text-neutral-900"
+          className="flex shrink-0 items-center gap-0.5 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
         >
           전체 보기
           <ChevronRight className="h-3.5 w-3.5" />
@@ -65,14 +65,14 @@ const RegionStrip = ({
               key={district}
               type="button"
               onClick={() => onSelectDistrict(selectedProvince, district)}
-              className="flex min-w-[4.5rem] max-w-[4.75rem] flex-col items-center gap-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-neutral-900 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+              className="flex min-w-[4.5rem] max-w-[4.75rem] flex-col items-center gap-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-foreground focus-visible:ring-offset-2 focus-visible:ring-offset-background"
             >
               <span
                 className={cn(
                   "flex h-14 w-14 items-center justify-center rounded-full border transition-colors",
                   selected
-                    ? "border-neutral-900 bg-neutral-900 text-white"
-                    : "border-neutral-300 bg-white text-neutral-900 hover:border-neutral-400"
+                    ? "border-foreground bg-foreground text-background"
+                    : "border-border bg-background text-foreground hover:bg-muted/50"
                 )}
               >
                 <Icon className="h-6 w-6" strokeWidth={1.5} />
@@ -80,7 +80,7 @@ const RegionStrip = ({
               <span
                 className={cn(
                   "w-full text-center text-[11px] leading-tight",
-                  selected ? "font-medium text-neutral-900" : "text-neutral-500"
+                  selected ? "font-medium text-foreground" : "text-muted-foreground"
                 )}
               >
                 {shortLabel(district)}
@@ -92,12 +92,12 @@ const RegionStrip = ({
         <button
           type="button"
           onClick={onOpenSelector}
-          className="flex min-w-[4.5rem] max-w-[4.75rem] flex-col items-center gap-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-neutral-900 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+          className="flex min-w-[4.5rem] max-w-[4.75rem] flex-col items-center gap-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-foreground focus-visible:ring-offset-2 focus-visible:ring-offset-background"
         >
-          <span className="flex h-14 w-14 items-center justify-center rounded-full border border-dashed border-neutral-300 bg-transparent text-neutral-500 transition-colors hover:border-neutral-400 hover:text-neutral-900">
+          <span className="flex h-14 w-14 items-center justify-center rounded-full border border-dashed border-border bg-transparent text-muted-foreground transition-colors hover:border-border hover:text-foreground">
             <ChevronRight className="h-6 w-6" strokeWidth={1.5} />
           </span>
-          <span className="w-full text-center text-[11px] leading-tight text-neutral-500">더보기</span>
+          <span className="w-full text-center text-[11px] leading-tight text-muted-foreground">더보기</span>
         </button>
       </div>
     </section>

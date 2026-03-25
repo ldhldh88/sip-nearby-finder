@@ -26,10 +26,14 @@ const PlaceThumbnail = ({ placeId, placeName, className = "", fallbackSize = "md
   const hasMultiple = photos.length > 1;
 
   const handleClick = (e: React.MouseEvent) => {
-    if (enableGallery && photos.length > 0) {
+    // When this thumbnail is rendered inside a clickable container (e.g. a Next `Link`),
+    // clicking the thumbnail should not trigger the parent navigation.
+    if (enableGallery) {
+      e.preventDefault();
       e.stopPropagation();
-      setGalleryOpen(true);
     }
+
+    if (enableGallery && photos.length > 0) setGalleryOpen(true);
   };
 
   return (

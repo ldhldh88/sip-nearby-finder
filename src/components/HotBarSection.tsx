@@ -50,16 +50,16 @@ const HotBarSection = ({ onSelectPlace }: HotBarSectionProps) => {
       <section className="mb-6">
         <button
           onClick={requestLocation}
-          className="flex w-full items-center gap-3 border border-dashed border-neutral-300 bg-neutral-50 p-4 transition-colors hover:bg-neutral-100"
+          className="flex w-full items-center gap-3 border border-dashed border-border bg-muted/50 p-4 transition-colors hover:bg-muted"
         >
-          <div className="flex h-10 w-10 items-center justify-center rounded-full border border-neutral-200 bg-white">
-            <Flame className="h-5 w-5 text-neutral-900" />
+          <div className="flex h-10 w-10 items-center justify-center rounded-full border border-border bg-background">
+            <Flame className="h-5 w-5 text-foreground" />
           </div>
           <div className="text-left">
-            <p className="text-sm font-semibold text-neutral-900">지금 핫한 술집 찾기</p>
-            <p className="text-xs text-neutral-500">현재 위치 기반으로 주변 인기 술집을 추천해드려요</p>
+            <p className="text-sm font-semibold text-foreground">지금 핫한 술집 찾기</p>
+            <p className="text-xs text-muted-foreground">현재 위치 기반으로 주변 인기 술집을 추천해드려요</p>
           </div>
-          <LocateFixed className="ml-auto h-5 w-5 text-neutral-700" />
+          <LocateFixed className="ml-auto h-5 w-5 text-muted-foreground" />
         </button>
       </section>
     );
@@ -70,12 +70,12 @@ const HotBarSection = ({ onSelectPlace }: HotBarSectionProps) => {
       {/* Header */}
       <div className="mb-3 flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <Flame className="h-5 w-5 text-neutral-900" />
-          <h2 className="text-base font-bold text-neutral-900">지금 핫한 술집</h2>
+          <Flame className="h-5 w-5 text-foreground" />
+          <h2 className="text-base font-bold text-foreground">지금 핫한 술집</h2>
         </div>
         <button
           onClick={requestLocation}
-          className="flex items-center gap-1 text-xs text-neutral-500 transition-colors hover:text-neutral-900"
+          className="flex items-center gap-1 text-xs text-muted-foreground transition-colors hover:text-foreground"
         >
           <LocateFixed className="h-3.5 w-3.5" />
           위치 갱신
@@ -84,9 +84,9 @@ const HotBarSection = ({ onSelectPlace }: HotBarSectionProps) => {
 
       {/* Loading geo */}
       {geoLoading && (
-        <div className="flex items-center gap-2 border border-neutral-200 bg-neutral-50 p-4">
-          <Loader2 className="h-4 w-4 animate-spin text-neutral-900" />
-          <span className="text-sm text-neutral-600">위치를 확인하고 있어요…</span>
+        <div className="flex items-center gap-2 border border-border bg-muted/50 p-4">
+          <Loader2 className="h-4 w-4 animate-spin text-foreground" />
+          <span className="text-sm text-muted-foreground">위치를 확인하고 있어요…</span>
         </div>
       )}
 
@@ -107,15 +107,15 @@ const HotBarSection = ({ onSelectPlace }: HotBarSectionProps) => {
           {/* Filters */}
           <div className="mb-3 flex items-center gap-2 flex-wrap">
             {/* Radius filter */}
-            <div className="flex overflow-hidden rounded-full border border-neutral-300">
+            <div className="flex overflow-hidden rounded-full border border-border">
               {RADIUS_OPTIONS.map((r) => (
                 <button
                   key={r}
                   onClick={() => setRadius(r)}
                   className={`px-3 py-1.5 text-xs font-medium transition-colors ${
                     radius === r
-                      ? "bg-neutral-900 text-white"
-                      : "bg-white text-neutral-600 hover:bg-neutral-50"
+                      ? "bg-foreground text-background"
+                      : "bg-background text-muted-foreground hover:bg-muted/50"
                   }`}
                 >
                   {r >= 1000 ? `${r / 1000}km` : `${r}m`}
@@ -124,13 +124,13 @@ const HotBarSection = ({ onSelectPlace }: HotBarSectionProps) => {
             </div>
 
             {/* Sort filter */}
-            <div className="flex overflow-hidden rounded-full border border-neutral-300">
+            <div className="flex overflow-hidden rounded-full border border-border">
               <button
                 onClick={() => setSortMode("hot")}
                 className={`px-3 py-1.5 text-xs font-medium transition-colors ${
                   sortMode === "hot"
-                    ? "bg-neutral-900 text-white"
-                    : "bg-white text-neutral-600 hover:bg-neutral-50"
+                    ? "bg-foreground text-background"
+                    : "bg-background text-muted-foreground hover:bg-muted/50"
                 }`}
               >
                 핫한 순
@@ -139,8 +139,8 @@ const HotBarSection = ({ onSelectPlace }: HotBarSectionProps) => {
                 onClick={() => setSortMode("distance")}
                 className={`px-3 py-1.5 text-xs font-medium transition-colors ${
                   sortMode === "distance"
-                    ? "bg-neutral-900 text-white"
-                    : "bg-white text-neutral-600 hover:bg-neutral-50"
+                    ? "bg-foreground text-background"
+                    : "bg-background text-muted-foreground hover:bg-muted/50"
                 }`}
               >
                 거리순
@@ -149,7 +149,7 @@ const HotBarSection = ({ onSelectPlace }: HotBarSectionProps) => {
           </div>
 
           {/* Map */}
-          <div className="mb-3 overflow-hidden border border-neutral-200">
+          <div className="mb-3 overflow-hidden border border-border">
             <KakaoMap
               center={position}
               places={sortedPlaces}
@@ -161,7 +161,7 @@ const HotBarSection = ({ onSelectPlace }: HotBarSectionProps) => {
           {/* Loading bars */}
           {isLoading && (
             <div className="flex items-center justify-center py-8">
-              <Loader2 className="h-6 w-6 animate-spin text-neutral-900" />
+              <Loader2 className="h-6 w-6 animate-spin text-foreground" />
             </div>
           )}
 
@@ -192,13 +192,13 @@ const HotBarSection = ({ onSelectPlace }: HotBarSectionProps) => {
                     />
                   ))
                 ) : (
-                  <p className="py-6 text-center text-sm text-neutral-500">
+                  <p className="py-6 text-center text-sm text-muted-foreground">
                     반경 내 술집이 없어요. 범위를 넓혀보세요.
                   </p>
                 )}
 
                 {sortedPlaces.length > 0 && (
-                  <p className="mt-1 text-center text-[10px] text-neutral-400">
+                  <p className="mt-1 text-center text-[10px] text-muted-foreground/80">
                     총 {data.total}개 중 상위 {sortedPlaces.length}개 · hotScore 기준
                   </p>
                 )}

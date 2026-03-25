@@ -184,15 +184,15 @@ const SearchBar = ({
         type="button"
         onClick={() => setOpen(true)}
         className={cn(
-          "group flex w-full min-h-[48px] items-center gap-3 rounded-full border border-neutral-300 bg-neutral-50 pl-5 pr-1.5 py-1.5 text-left transition hover:border-neutral-400",
+          "group flex w-full min-h-[48px] items-center gap-3 rounded-full border border-border bg-muted/50 pl-5 pr-1.5 py-1.5 text-left transition-colors hover:bg-muted/80 hover:border-border",
           className
         )}
         aria-label="술집 검색"
       >
-        <span className="pointer-events-none flex-1 truncate text-[15px] text-neutral-400">
+        <span className="pointer-events-none flex-1 truncate text-[15px] text-muted-foreground">
           {placeholder}
         </span>
-        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-neutral-900 text-white transition group-active:scale-[0.98]">
+        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-foreground text-background transition group-active:scale-[0.98]">
           <Plus className="h-5 w-5" strokeWidth={2.25} aria-hidden />
         </span>
       </button>
@@ -201,7 +201,7 @@ const SearchBar = ({
         type="button"
         onClick={() => setOpen(true)}
         className={cn(
-          "rounded-full p-2 text-neutral-900 transition-colors hover:bg-neutral-100",
+          "rounded-full p-2 text-foreground transition-colors hover:bg-muted/50",
           className
         )}
         aria-label="검색"

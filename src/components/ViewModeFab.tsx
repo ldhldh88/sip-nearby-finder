@@ -60,11 +60,11 @@ export default function ViewModeFab({
           }}
           className={cn(
             "pointer-events-auto inline-flex touch-manipulation select-none items-center justify-center gap-1.5",
-            "min-h-[44px] min-w-[44px] rounded-full border border-neutral-300 bg-white px-4 py-2",
-            "text-sm font-medium text-neutral-900 backdrop-blur-sm",
+            "min-h-[44px] min-w-[44px] rounded-full border border-border bg-background px-4 py-2",
+            "text-sm font-medium text-foreground backdrop-blur-sm",
             "transition-transform active:scale-[0.98]",
             "[-webkit-tap-highlight-color:transparent]",
-            "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-neutral-900"
+            "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-foreground"
           )}
           aria-label={isList ? "지도로 보기" : "목록으로 돌아가기"}
         >

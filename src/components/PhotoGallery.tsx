@@ -33,11 +33,20 @@ const PhotoGallery = ({ photos, placeName, open, onClose }: PhotoGalleryProps) =
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        onClick={onClose}
+        onClick={(e) => {
+          // Prevent clicks from bubbling up to a parent `Link` (e.g. BarListItem).
+          e.preventDefault();
+          e.stopPropagation();
+          onClose();
+        }}
       >
         {/* Close button */}
         <button
-          onClick={onClose}
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            onClose();
+          }}
           className="absolute top-4 right-4 z-10 rounded-full bg-background/20 p-2 text-background backdrop-blur-sm transition-colors hover:bg-background/40"
         >
           <X className="h-5 w-5" />
