@@ -6,12 +6,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const base = getSiteUrl();
   const lastModified = new Date();
 
-  const staticRoutes = ["", "/about", "/contact", "/privacy", "/terms"];
+  const staticRoutes = ["", "/explore", "/about", "/contact", "/privacy", "/terms"];
   const entries: MetadataRoute.Sitemap = staticRoutes.map((path) => ({
     url: `${base}${path || "/"}`,
     lastModified,
-    changeFrequency: path === "" ? "daily" : "monthly",
-    priority: path === "" ? 1 : 0.6,
+    changeFrequency: path === "" || path === "/explore" ? "daily" : "monthly",
+    priority: path === "" ? 1 : path === "/explore" ? 0.95 : 0.6,
   }));
 
   try {
@@ -40,7 +40,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       q.set("province", d.province.name);
       q.set("district", d.name);
       entries.push({
-        url: `${base}/?${q.toString()}`,
+        url: `${base}/explore?${q.toString()}`,
         lastModified,
         changeFrequency: "weekly",
         priority: 0.75,
