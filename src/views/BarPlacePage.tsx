@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { MapPin, Loader2 } from "lucide-react";
@@ -20,7 +20,16 @@ type BarPlacePageProps = {
 };
 
 const BarPlacePage = ({ place, districtName, provinceName }: BarPlacePageProps) => {
+  const router = useRouter();
   const queryClient = useQueryClient();
+
+  const goBack = () => {
+    if (typeof window !== "undefined" && window.history.length > 1) {
+      router.back();
+    } else {
+      router.push("/");
+    }
+  };
 
   // Connected district (동네) info
   const { data: districtMap, isLoading: isDistrictsLoading } = usePlaceDistricts([place.id]);
@@ -183,9 +192,13 @@ const BarPlacePage = ({ place, districtName, provinceName }: BarPlacePageProps) 
     <div className="flex min-h-screen flex-col bg-background">
       <header className="sticky top-0 z-10 h-14 border-b border-border backdrop-blur-md bg-background/80">
         <div className="mx-auto flex h-full max-w-3xl items-center justify-between px-4">
-          <Link href="/" className="text-sm font-semibold text-foreground transition-colors hover:text-primary">
+          <button
+            type="button"
+            onClick={goBack}
+            className="cursor-pointer bg-transparent p-0 text-left text-sm font-semibold text-foreground transition-colors hover:text-primary"
+          >
             ← 홈
-          </Link>
+          </button>
           <div className="flex min-w-0 items-center gap-2">
             <span className="max-w-[60vw] truncate text-xs text-muted-foreground">가게 정보</span>
             <DarkModeToggle />
@@ -226,9 +239,13 @@ const BarPlacePage = ({ place, districtName, provinceName }: BarPlacePageProps) 
                 네이버지도에서 보기
               </a>
             ) : null}
-            <Link href="/" className="inline-flex rounded-lg border border-border px-4 py-2 text-sm font-medium">
+            <button
+              type="button"
+              onClick={goBack}
+              className="inline-flex rounded-lg border border-border px-4 py-2 text-sm font-medium"
+            >
               다른 술집 찾기
-            </Link>
+            </button>
           </div>
         </article>
 

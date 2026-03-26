@@ -1,7 +1,6 @@
 import { useState, useMemo, useCallback, useEffect, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Loader2, MapPin, RefreshCw } from "lucide-react";
-import { useQueryClient } from "@tanstack/react-query";
+import { Loader2, MapPin } from "lucide-react";
 import RegionSelector from "@/components/RegionSelector";
 import BarListItem from "@/components/BarListItem";
 import SearchBar from "@/components/SearchBar";
@@ -16,10 +15,8 @@ import { useInfiniteThemeFilteredBars } from "@/hooks/useInfiniteThemeFilteredBa
 import { useThemes, useBarThemes } from "@/hooks/useThemes";
 import { useBarMeta } from "@/hooks/useBarLikeCounts";
 import { KakaoPlace } from "@/lib/kakao";
-import { supabase } from "@/integrations/supabase/client";
 import Footer from "@/components/Footer";
 import ViewModeFab from "@/components/ViewModeFab";
-import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import DarkModeToggle from "@/components/DarkModeToggle";
 import {
@@ -36,13 +33,10 @@ const Index = () => {
   const [regionOpen, setRegionOpen] = useState(false);
   const [detailPlace, setDetailPlace] = useState<KakaoPlace | null>(null);
   const [selectedThemeId, setSelectedThemeId] = useState<string | null>(null);
-  const [isSyncing, setIsSyncing] = useState(false);
   const [viewMode, setViewMode] = useState<"list" | "map">("list");
   const [mapViewportBounds, setMapViewportBounds] = useState<MapViewportBounds | null>(null);
   /** API 호출 디바운스 — idle 이벤트가 잦을 때 요청 수 제한 */
   const [debouncedMapBounds, setDebouncedMapBounds] = useState<MapViewportBounds | null>(null);
-  const queryClient = useQueryClient();
-
   const selectedProvince = searchParams.get("province") || "서울";
   const selectedDistrict = searchParams.get("district") || "강남/역삼/삼성/논현";
 
@@ -80,47 +74,6 @@ const Index = () => {
     else params.delete("district");
     router.push(`/?${params.toString()}`);
   };
-
-  const handleSync = useCallback(async () => {
-    if (isSyncing) return;
-    setIsSyncing(true);
-    try {
-      // Find district ID
-      const location = selectedDistrict.split("/")[0]?.trim();
-      const { data: districts } = await supabase
-        .from("districts")
-        .select("id")
-        .ilike("name", `%${location}%`)
-        .limit(1);
-      const districtId = districts?.[0]?.id;
-      if (!districtId) {
-        toast.error("지역을 찾을 수 없어요");
-        return;
-      }
-
-      const syncRes = await fetch("/api/sync-places", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ district_id: districtId }),
-      });
-      if (!syncRes.ok) {
-        const errBody = await syncRes.json().catch(() => ({}));
-        throw new Error(
-          typeof errBody === "object" && errBody && "error" in errBody
-            ? String((errBody as { error?: string }).error)
-            : `sync failed: ${syncRes.status}`
-        );
-      }
-
-      toast.success("동기화 완료! 리스트를 새로고침합니다");
-      queryClient.invalidateQueries({ queryKey: ["district-bars"] });
-    } catch (e) {
-      toast.error("동기화에 실패했어요");
-      console.error(e);
-    } finally {
-      setIsSyncing(false);
-    }
-  }, [selectedDistrict, isSyncing, queryClient]);
 
   const regionLabel = selectedDistrict
     ? selectedDistrict
@@ -251,25 +204,14 @@ const Index = () => {
 
       <HotBarSection onSelectPlace={(place) => setDetailPlace(place)} />
 
-      {/* Result count + Sync button */}
       {!isLoading && !selectedThemeId && totalCount > 0 && (
-        <div className="mb-4 flex items-center justify-between">
-          <p className="text-sm text-muted-foreground">
-            총{" "}
-            <span className="font-semibold text-foreground">
-              {totalCount.toLocaleString()}
-            </span>
-            개의 술집
-          </p>
-          <button
-            onClick={handleSync}
-            disabled={isSyncing}
-            className="flex items-center gap-1.5 rounded-full border border-border px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-muted/50 disabled:opacity-50"
-          >
-            <RefreshCw className={`h-3.5 w-3.5 ${isSyncing ? "animate-spin" : ""}`} />
-            {isSyncing ? "동기화 중…" : "데이터 갱신"}
-          </button>
-        </div>
+        <p className="mb-4 text-sm text-muted-foreground">
+          총{" "}
+          <span className="font-semibold text-foreground">
+            {totalCount.toLocaleString()}
+          </span>
+          개의 술집
+        </p>
       )}
       {selectedThemeId && !isLoading && totalCount > 0 && (
         <p className="mb-4 text-sm text-muted-foreground">
