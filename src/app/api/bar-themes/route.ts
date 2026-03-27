@@ -1,4 +1,6 @@
+import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
+import { isValidPostgresUuid } from "@/lib/anonymous-user-id";
 
 export async function GET(req: Request) {
   const url = new URL(req.url);
@@ -50,22 +52,85 @@ export async function POST(req: Request) {
     );
   }
 
-  // Replace semantics: remove existing tags for this user/place, then re-create.
-  // This makes "edit after connecting" possible.
-  await prisma.barTheme.deleteMany({
-    where: { kakao_place_id: kakaoPlaceId, user_id: userId },
-  });
+  if (!isValidPostgresUuid(userId)) {
+    return Response.json(
+      {
+        error:
+          "user_id는 UUID 형식이어야 합니다. 앱을 새로고침하면 자동으로 바로잡힙니다.",
+      },
+      { status: 400 }
+    );
+  }
 
-  if (themeIds.length > 0) {
-    await prisma.barTheme.createMany({
-      data: themeIds.map((theme_id) => ({
-        kakao_place_id: kakaoPlaceId,
-        theme_id,
-        user_id: userId,
-      })),
+  const uniqueThemeIds = [...new Set(themeIds)];
+  for (const tid of uniqueThemeIds) {
+    if (!isValidPostgresUuid(tid)) {
+      return Response.json({ error: "잘못된 테마 ID입니다." }, { status: 400 });
+    }
+  }
+
+  try {
+    if (uniqueThemeIds.length > 0) {
+      await prisma.barMeta.upsert({
+        where: { kakao_place_id: kakaoPlaceId },
+        create: {
+          kakao_place_id: kakaoPlaceId,
+          like_count: 0,
+          view_count: 0,
+          bookmark_count: 0,
+          hot_score: 0,
+        },
+        update: {},
+      });
+    }
+
+    await prisma.barTheme.deleteMany({
+      where: { kakao_place_id: kakaoPlaceId, user_id: userId },
     });
+
+    if (uniqueThemeIds.length > 0) {
+      await prisma.barTheme.createMany({
+        data: uniqueThemeIds.map((theme_id) => ({
+          kakao_place_id: kakaoPlaceId,
+          theme_id,
+          user_id: userId,
+        })),
+      });
+    }
+  } catch (e) {
+    console.error("[bar-themes POST]", e);
+
+    const raw = e instanceof Error ? e.message : String(e);
+    if (/row-level security|42501/i.test(raw)) {
+      return Response.json(
+        {
+          error:
+            "데이터베이스 접근 권한(bar_themes RLS) 문제입니다. Supabase에 최신 SQL 마이그레이션을 적용했는지 확인해 주세요.",
+        },
+        { status: 503 }
+      );
+    }
+
+    if (e instanceof Prisma.PrismaClientKnownRequestError) {
+      if (e.code === "P2003") {
+        return Response.json(
+          { error: "장소·테마 정보가 DB와 맞지 않습니다. 잠시 후 다시 시도해 주세요." },
+          { status: 400 }
+        );
+      }
+      if (e.code === "P2002") {
+        return Response.json(
+          { error: "중복된 저장 요청입니다. 새로고침 후 다시 시도해 주세요." },
+          { status: 409 }
+        );
+      }
+    }
+
+    return Response.json(
+      { error: "테마를 저장하지 못했습니다. 잠시 후 다시 시도해 주세요." },
+      { status: 500 }
+    );
   }
 
   return Response.json({ success: true });
 }
-

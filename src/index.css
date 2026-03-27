@@ -82,6 +82,8 @@
   html {
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    /* 페이지마다 스크롤 유무가 바뀔 때 레이아웃(헤더 중앙 등)이 밀리지 않도록 */
+    scrollbar-gutter: stable;
   }
 
   body {

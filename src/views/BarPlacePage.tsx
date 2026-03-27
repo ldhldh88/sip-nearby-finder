@@ -12,6 +12,7 @@ import { useBarThemes, useThemes } from "@/hooks/useThemes";
 import { useRegionsRaw } from "@/hooks/useRegions";
 import DarkModeToggle from "@/components/DarkModeToggle";
 import NaverMapEmbed from "@/components/NaverMapEmbed";
+import { readOrCreateAnonymousUserId } from "@/lib/anonymous-user-id";
 
 type BarPlacePageProps = {
   place: KakaoPlace;
@@ -49,23 +50,7 @@ const BarPlacePage = ({ place, districtName, provinceName }: BarPlacePageProps) 
   // Anonymous user id for theme tagging (no login required)
   const [anonUserId, setAnonUserId] = useState<string | null>(null);
   useEffect(() => {
-    const key = "fp_anonymous_user_id";
-    try {
-      const existing = localStorage.getItem(key);
-      if (existing) {
-        setAnonUserId(existing);
-        return;
-      }
-      const newId =
-        typeof crypto !== "undefined" && "randomUUID" in crypto
-          ? crypto.randomUUID()
-          : `${Date.now()}-${Math.random().toString(16).slice(2)}`;
-      localStorage.setItem(key, newId);
-      setAnonUserId(newId);
-    } catch {
-      // If localStorage is unavailable, theme saving will be disabled.
-      setAnonUserId(null);
-    }
+    setAnonUserId(readOrCreateAnonymousUserId());
   }, []);
 
   // Connected themes info (카카오 "장소 카테고리"가 아니라, 앱 테마)
@@ -173,7 +158,9 @@ const BarPlacePage = ({ place, districtName, provinceName }: BarPlacePageProps) 
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        throw new Error(typeof data.error === "string" ? data.error : `HTTP ${res.status}`);
+        const errMsg =
+          typeof data.error === "string" ? data.error : `요청 실패 (${res.status})`;
+        throw new Error(errMsg);
       }
 
       toast.success(
@@ -182,7 +169,7 @@ const BarPlacePage = ({ place, districtName, provinceName }: BarPlacePageProps) 
       queryClient.invalidateQueries({ queryKey: ["bar-themes"] });
     } catch (e) {
       console.error(e);
-      toast.error("테마 등록에 실패했어요");
+      toast.error(e instanceof Error && e.message ? e.message : "테마 등록에 실패했어요");
     } finally {
       setIsSavingThemes(false);
     }

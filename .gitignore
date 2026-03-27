@@ -33,3 +33,6 @@ dist-ssr
 
 # Next.js build / dev output
 .next/
+
+# Supabase CLI 캐시
+supabase/.temp/

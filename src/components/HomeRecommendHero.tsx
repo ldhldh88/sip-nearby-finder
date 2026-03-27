@@ -1,9 +1,11 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { Loader2, MapPin, Sparkles } from "lucide-react";
+import { Heart, Loader2, MapPin, Sparkles } from "lucide-react";
+import PlaceThumbnail from "@/components/PlaceThumbnail";
 import { useGeolocation } from "@/hooks/useGeolocation";
 import { useNearbyRecommend } from "@/hooks/useNearbyRecommend";
+import { useReverseGeocode } from "@/hooks/useReverseGeocode";
 import type { KakaoPlace } from "@/lib/kakao";
 import { cn } from "@/lib/utils";
 
@@ -15,6 +17,7 @@ interface HomeRecommendHeroProps {
 
 export default function HomeRecommendHero({ onSelectPlace }: HomeRecommendHeroProps) {
   const { position, error: geoError, loading: geoLoading, requestLocation } = useGeolocation();
+  const addressQuery = useReverseGeocode(position?.lat ?? null, position?.lng ?? null);
   const recommendQuery = useNearbyRecommend(position?.lat ?? null, position?.lng ?? null, RADIUS_M);
   const [showResult, setShowResult] = useState(false);
 
@@ -84,12 +87,27 @@ export default function HomeRecommendHero({ onSelectPlace }: HomeRecommendHeroPr
               </div>
             )}
             {!geoLoading && !geoError && position && (
-              <p className="text-foreground">
-                <span className="text-muted-foreground">현재 위치</span>{" "}
-                <span className="font-mono text-xs tabular-nums sm:text-sm">
-                  {position.lat.toFixed(5)}, {position.lng.toFixed(5)}
-                </span>
-              </p>
+              <>
+                {addressQuery.isLoading && (
+                  <p className="flex items-center gap-2 text-muted-foreground">
+                    <Loader2 className="h-4 w-4 animate-spin shrink-0" aria-hidden />
+                    주소를 불러오는 중이에요…
+                  </p>
+                )}
+                {!addressQuery.isLoading && addressQuery.data?.address && (
+                  <p className="text-sm leading-snug text-foreground">
+                    <span className="text-muted-foreground">현재 위치</span>{" "}
+                    <span className="font-medium">{addressQuery.data.address}</span>
+                  </p>
+                )}
+                {!addressQuery.isLoading &&
+                  !addressQuery.data?.address &&
+                  (addressQuery.isSuccess || addressQuery.isError) && (
+                    <p className="text-sm text-muted-foreground">
+                      주소를 불러오지 못했어요. 잠시 후 다시 시도해 주세요.
+                    </p>
+                  )}
+              </>
             )}
             {!geoLoading && !geoError && !position && (
               <button
@@ -139,23 +157,49 @@ export default function HomeRecommendHero({ onSelectPlace }: HomeRecommendHeroPr
             <p className="text-center text-xs font-medium text-muted-foreground">
               {data.places.length === 1 ? "이번 추천" : "동점으로 함께 추천해요"}
             </p>
-            <ul className="flex flex-col gap-2">
+            <ul className="flex flex-col gap-3">
               {data.places.map((place) => {
                 const likes = data.metaMap[place.id]?.like_count ?? 0;
                 return (
                   <li key={place.id}>
-                    <button
-                      type="button"
+                    <div
+                      role="button"
+                      tabIndex={0}
                       onClick={() => onSelectPlace(place)}
-                      className="flex w-full items-center justify-between gap-3 rounded-lg border border-border bg-card px-3 py-3 text-left text-sm transition-colors hover:bg-muted/50"
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault();
+                          onSelectPlace(place);
+                        }
+                      }}
+                      className="flex w-full cursor-pointer gap-3 rounded-lg border border-border bg-card p-3 text-left shadow-sm transition-colors hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                     >
-                      <span className="min-w-0 truncate font-medium text-foreground">
-                        {place.place_name}
-                      </span>
-                      <span className="shrink-0 tabular-nums text-xs text-muted-foreground">
-                        좋아요 {likes}
-                      </span>
-                    </button>
+                      <PlaceThumbnail
+                        placeId={place.id}
+                        placeName={place.place_name}
+                        className="h-20 w-20 shrink-0 rounded-lg"
+                        fallbackSize="md"
+                        enableGallery
+                      />
+                      <div className="flex min-w-0 flex-1 items-center justify-between gap-3">
+                        <span className="truncate text-sm font-semibold text-foreground">
+                          {place.place_name}
+                        </span>
+                        <div
+                          className="flex shrink-0 flex-col items-center gap-0.5"
+                          aria-label={`좋아요 ${likes}`}
+                        >
+                          <Heart
+                            className="h-5 w-5 text-[#FF833C]"
+                            fill={likes > 0 ? "currentColor" : "none"}
+                            aria-hidden
+                          />
+                          <span className="text-[11px] tabular-nums leading-none text-muted-foreground">
+                            {likes > 0 ? likes.toLocaleString() : ""}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
                   </li>
                 );
               })}

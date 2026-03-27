@@ -29,30 +29,33 @@ export default function HomeAppHeader({
 
   return (
     <header className="sticky top-0 z-50 h-14 border-b border-border bg-background/95 backdrop-blur-sm">
-      <div className="mx-auto flex h-full max-w-3xl items-center gap-2 px-4 sm:gap-3">
-        <Link
-          href="/"
-          className="flex min-w-0 shrink-0 items-center gap-2 sm:gap-2.5"
-          aria-label="홈으로"
-        >
-          <img
-            src="/logo.svg"
-            alt=""
-            width={28}
-            height={28}
-            className="h-7 w-7 shrink-0"
-            aria-hidden
-          />
-          <span className="truncate text-lg font-semibold leading-none tracking-[-0.02em] text-foreground">
-            {title}
-          </span>
-          <span className="hidden shrink-0 border border-border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground sm:inline">
-            Beta
-          </span>
-        </Link>
+      {/* 3열 그리드: 좌·우는 동일 1fr, 가운데는 auto → 네비가 항상 컨테이너 기하학적 중앙 */}
+      <div className="mx-auto grid h-full w-full max-w-3xl grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-x-2 px-4 sm:gap-x-3">
+        <div className="flex min-w-0 items-center justify-self-start">
+          <Link
+            href="/"
+            className="flex min-w-0 items-center gap-2 sm:gap-2.5"
+            aria-label="홈으로"
+          >
+            <img
+              src="/logo.svg"
+              alt=""
+              width={28}
+              height={28}
+              className="h-7 w-7 shrink-0"
+              aria-hidden
+            />
+            <span className="truncate text-lg font-semibold leading-none tracking-[-0.02em] text-foreground">
+              {title}
+            </span>
+            <span className="hidden shrink-0 border border-border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground sm:inline">
+              Beta
+            </span>
+          </Link>
+        </div>
 
         <nav
-          className="flex min-w-0 flex-1 items-center justify-center gap-0.5 sm:gap-2"
+          className="flex shrink-0 items-center justify-center gap-0.5 sm:gap-2 justify-self-center"
           aria-label="주요 메뉴"
         >
           {NAV_ITEMS.map(({ href, label }) => {
@@ -65,7 +68,7 @@ export default function HomeAppHeader({
                 key={href}
                 href={href}
                 className={cn(
-                  "shrink-0 rounded-md px-2 py-1.5 text-xs font-semibold transition-colors sm:px-3 sm:text-sm",
+                  "inline-flex min-w-[4.75rem] shrink-0 items-center justify-center rounded-md px-2 py-1.5 text-center text-xs font-semibold transition-colors sm:min-w-[5.75rem] sm:px-3 sm:text-sm",
                   active
                     ? "bg-muted text-foreground"
                     : "text-muted-foreground hover:bg-muted/60 hover:text-foreground"
@@ -77,7 +80,7 @@ export default function HomeAppHeader({
           })}
         </nav>
 
-        <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
+        <div className="flex min-w-0 items-center justify-end justify-self-end gap-1.5 sm:gap-2">
           {showRegionControls && onOpenRegion && (
             <>
               <p
