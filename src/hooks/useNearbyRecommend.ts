@@ -12,13 +12,17 @@ export interface NearbyRecommendResult {
 async function fetchNearbyRecommend(
   lat: number,
   lng: number,
-  radiusMeters: number
+  radiusMeters: number,
+  excludedPlaceIds: string[]
 ): Promise<NearbyRecommendResult> {
   const params = new URLSearchParams({
     lat: String(lat),
     lng: String(lng),
     radiusMeters: String(radiusMeters),
   });
+  if (excludedPlaceIds.length > 0) {
+    params.set("exclude", [...excludedPlaceIds].sort().join(","));
+  }
   const res = await fetch(`/api/nearby-recommend?${params}`);
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
@@ -30,12 +34,15 @@ async function fetchNearbyRecommend(
 export function useNearbyRecommend(
   lat: number | null,
   lng: number | null,
-  radiusMeters: number = 1000
+  radiusMeters: number = 1000,
+  excludedPlaceIds: string[] = []
 ) {
+  const excludeKey = [...excludedPlaceIds].sort().join(",");
   return useQuery({
-    queryKey: ["nearby-recommend", lat, lng, radiusMeters],
-    queryFn: () => fetchNearbyRecommend(lat!, lng!, radiusMeters),
+    queryKey: ["nearby-recommend", lat, lng, radiusMeters, excludeKey],
+    queryFn: () => fetchNearbyRecommend(lat!, lng!, radiusMeters, excludedPlaceIds),
     enabled: lat !== null && lng !== null && Number.isFinite(lat) && Number.isFinite(lng),
+    placeholderData: (previousData) => previousData,
     staleTime: 90_000,
     gcTime: 5 * 60_000,
   });

@@ -22,6 +22,19 @@ type Row = {
 /** ~meters per degree latitude */
 const M_PER_DEG_LAT = 111_320;
 
+/** Max comma-separated place IDs accepted for `exclude` (abuse guard). */
+const EXCLUDE_ID_MAX = 200;
+
+function parseExcludeIds(raw: string | null): Set<string> {
+  if (!raw?.trim()) return new Set();
+  const ids = raw
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean)
+    .slice(0, EXCLUDE_ID_MAX);
+  return new Set(ids);
+}
+
 function bboxPaddingDegrees(lat: number, radiusMeters: number): { dLat: number; dLng: number } {
   const pad = 1.02;
   const dLat = (radiusMeters * pad) / M_PER_DEG_LAT;
@@ -37,6 +50,7 @@ export async function GET(req: Request) {
   const lng = parseFloat(url.searchParams.get("lng") ?? "");
   const radiusRaw = parseFloat(url.searchParams.get("radiusMeters") ?? "1000");
   const radiusMeters = Number.isFinite(radiusRaw) ? radiusRaw : 1000;
+  const excludeIds = parseExcludeIds(url.searchParams.get("exclude"));
 
   if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
     return Response.json({ error: "lat and lng are required as numbers" }, { status: 400 });
@@ -103,7 +117,12 @@ export async function GET(req: Request) {
     WHERE dist_m <= ${radiusMeters}::double precision
   `;
 
-  if (rows.length === 0) {
+  const rowsFiltered =
+    excludeIds.size === 0
+      ? rows
+      : rows.filter((r) => !excludeIds.has(r.kakao_place_id));
+
+  if (rowsFiltered.length === 0) {
     return Response.json({
       kind: "no_places" satisfies NearbyRecommendKind,
       places: [] as KakaoPlace[],
@@ -111,7 +130,7 @@ export async function GET(req: Request) {
     });
   }
 
-  const maxLike = Math.max(...rows.map((r) => r.like_count));
+  const maxLike = Math.max(...rowsFiltered.map((r) => r.like_count));
   if (maxLike <= 0) {
     return Response.json({
       kind: "no_metadata" satisfies NearbyRecommendKind,
@@ -120,7 +139,7 @@ export async function GET(req: Request) {
     });
   }
 
-  const winners = rows.filter((r) => r.like_count === maxLike);
+  const winners = rowsFiltered.filter((r) => r.like_count === maxLike);
   const places: KakaoPlace[] = [];
   const metaMap: Record<string, BarMeta> = {};
 

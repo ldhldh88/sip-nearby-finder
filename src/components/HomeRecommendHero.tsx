@@ -18,7 +18,13 @@ interface HomeRecommendHeroProps {
 export default function HomeRecommendHero({ onSelectPlace }: HomeRecommendHeroProps) {
   const { position, error: geoError, loading: geoLoading, requestLocation } = useGeolocation();
   const addressQuery = useReverseGeocode(position?.lat ?? null, position?.lng ?? null);
-  const recommendQuery = useNearbyRecommend(position?.lat ?? null, position?.lng ?? null, RADIUS_M);
+  const [excludedPlaceIds, setExcludedPlaceIds] = useState<string[]>([]);
+  const recommendQuery = useNearbyRecommend(
+    position?.lat ?? null,
+    position?.lng ?? null,
+    RADIUS_M,
+    excludedPlaceIds
+  );
   const [showResult, setShowResult] = useState(false);
 
   useEffect(() => {
@@ -27,6 +33,7 @@ export default function HomeRecommendHero({ onSelectPlace }: HomeRecommendHeroPr
 
   useEffect(() => {
     setShowResult(false);
+    setExcludedPlaceIds([]);
   }, [position?.lat, position?.lng]);
 
   const data = recommendQuery.data;
@@ -54,6 +61,15 @@ export default function HomeRecommendHero({ onSelectPlace }: HomeRecommendHeroPr
     if (!canRecommend || !data) return;
     setShowResult(true);
   }, [canRecommend, data]);
+
+  const handleRerollRecommend = useCallback(() => {
+    if (!data || data.kind !== "ok" || data.places.length === 0) return;
+    setExcludedPlaceIds((prev) => {
+      const next = new Set(prev);
+      for (const p of data.places) next.add(p.id);
+      return Array.from(next);
+    });
+  }, [data]);
 
   return (
     <section className="mb-8 rounded-xl border border-border bg-muted/30 p-5">
@@ -204,6 +220,17 @@ export default function HomeRecommendHero({ onSelectPlace }: HomeRecommendHeroPr
                 );
               })}
             </ul>
+            <button
+              type="button"
+              disabled={recommendQuery.isFetching}
+              onClick={handleRerollRecommend}
+              className="flex w-full items-center justify-center gap-2 rounded-lg border border-border bg-background py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-muted/60 disabled:pointer-events-none disabled:opacity-60"
+            >
+              {recommendQuery.isFetching ? (
+                <Loader2 className="h-4 w-4 animate-spin shrink-0" aria-hidden />
+              ) : null}
+              다른 술집 추천
+            </button>
           </div>
         )}
       </div>
