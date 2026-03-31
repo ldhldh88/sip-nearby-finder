@@ -67,6 +67,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 window.dataLayer = window.dataLayer || [];
 function gtag(){dataLayer.push(arguments);}
 window.gtag = gtag;
+gtag('consent','default',{ad_storage:'denied',ad_user_data:'denied',ad_personalization:'denied',analytics_storage:'denied'});
 `}
         </Script>
         <Providers>{children}</Providers>
